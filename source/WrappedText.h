@@ -70,7 +70,7 @@ public:
 private:
 	void SetText(const char *it, size_t length);
 	void Wrap();
-	void AdjustLine(unsigned &lineBegin, int &lineWidth, bool isEnd);
+	void AdjustLine(size_t lineBegin, int lineWidth, bool isEnd, const std::vector<int> &spaceWeight);
 	int Space(char32_t c) const;
 	
 	
@@ -80,11 +80,11 @@ private:
 	public:
 		Word();
 		
-		size_t Index() const;
+		const std::string &Str() const;
 		Point Pos() const;
 		
 	private:
-		size_t index;
+		std::string s;
 		int x;
 		int y;
 		
