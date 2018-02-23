@@ -17,6 +17,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "ConditionSet.h"
 #include "Conversation.h"
+#include "text/Gettext.h"
 
 #include <string>
 #include <vector>
@@ -48,8 +49,8 @@ public:
 	
 	// Information needed for the scenario picker.
 	const Sprite *GetThumbnail() const noexcept;
-	const std::string &GetDisplayName() const noexcept;
-	const std::string &GetDescription() const noexcept;
+	std::string GetDisplayName() const noexcept;
+	std::string GetDescription() const noexcept;
 	
 	
 private:
@@ -65,7 +66,7 @@ private:
 	const Sprite *thumbnail = nullptr;
 	// The user-friendly display name for this starting scenario.
 	std::string name;
-	std::string description;
+	std::vector<Gettext::T_> description;
 };
 
 
