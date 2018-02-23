@@ -16,26 +16,28 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DataNode.h"
 #include "Effect.h"
 #include "GameData.h"
+#include "LocaleInfo.h"
 #include "SpriteSet.h"
 
 #include <cmath>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	const double EPS = 0.0000000001;
 }
 
 const vector<string> Outfit::CATEGORIES = {
-	"Guns",
-	"Turrets",
-	"Secondary Weapons",
-	"Ammunition",
-	"Systems",
-	"Power",
-	"Engines",
-	"Hand to Hand",
-	"Special"
+	G("Guns"),
+	G("Turrets"),
+	G("Secondary Weapons"),
+	G("Ammunition"),
+	G("Systems"),
+	G("Power"),
+	G("Engines"),
+	G("Hand to Hand"),
+	G("Special")
 };
 
 
@@ -73,7 +75,7 @@ void Outfit::Load(const DataNode &node)
 			ammo = GameData::Outfits().Get(child.Token(1));
 		else if(child.Token(0) == "description" && child.Size() >= 2)
 		{
-			description += child.Token(1);
+			description += LocaleInfo::TranslateData(child.Token(1));
 			description += '\n';
 		}
 		else if(child.Token(0) == "cost" && child.Size() >= 2)
@@ -98,16 +100,23 @@ void Outfit::Load(const DataNode &node)
 
 
 
-const string &Outfit::Name() const
+string Outfit::Name(unsigned long n) const
 {
-	return name;
+	return LocaleInfo::TranslateData(name, pluralName, "outfit", n);
 }
 
 
 
-const string &Outfit::PluralName() const
+string Outfit::PluralName() const
 {
-	return pluralName;
+	return LocaleInfo::TranslateData(pluralName, "outfit");
+}
+
+
+
+const string &Outfit::Identifier() const
+{
+	return name;
 }
 
 

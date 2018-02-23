@@ -11,6 +11,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 */
 
 #include "Format.h"
+#include "LocaleInfo.h"
 
 #include <algorithm>
 #include <cctype>
@@ -69,6 +70,8 @@ string Format::Number(double value)
 	// Special case: the value is close enough to a power of 10 that it rounds
 	// up to one. There is now an extra digit on the left. (This should never
 	// happen due to the rounding in the initial power calculation.)
+	const char dec = LocaleInfo::GetDecimalPoint();
+	const char sep = LocaleInfo::GetThousandsSep();
 	if(pow(10., left) <= rounded)
 		++left;
 	if(left > 3)
@@ -90,7 +93,7 @@ string Format::Number(double value)
 			{
 				if(nonzero)
 				{
-					result += '.';
+					result += dec;
 					if(!rounded)
 						result += '0';
 				}
@@ -101,7 +104,7 @@ string Format::Number(double value)
 		{
 			--left;
 			if(left == delimiterIndex && rounded)
-				result += ',';
+				result += sep;
 		}
 	} while(rounded || right);
 	
@@ -273,4 +276,133 @@ vector<string> Format::Split(const string &str, const string &separator)
 			break;
 	}
 	return result;
+}
+
+
+
+// Make a string according to a format-string.
+string Format::StringF(initializer_list<string> args)
+{
+	if(args.size() == 1)
+		return *args.begin();
+	else if(args.size() > 1)
+	{
+		string buf;
+		int state = 0;
+		size_t n = 0;
+		size_t pos = 0;
+		for(const auto c : *args.begin())
+		{
+			buf += c;
+			if(state == 0)
+			{
+				if(c == '%')
+				{
+					state = 1;
+					n = 0;
+					pos = buf.length() - 1;
+				}
+			}
+			else
+			{
+				if(c == '%')
+				{
+					if(0 < n && n < args.size())
+					{
+						buf.erase(pos, buf.length());
+						buf += args.begin()[n];
+					}
+					state = 0;
+				}
+				else if(isdigit(c))
+					n = 10*n + c - '0';
+				else
+					state = 0;
+			}
+		}
+		return buf;
+	} else
+		return "";
+}
+
+
+
+Format::ListOfWords::ListOfWords()
+	: separators(1, vector<string>{ ", " })
+{
+}
+
+
+
+Format::ListOfWords::ListOfWords(const string &format)
+	: separators()
+{
+	SetSeparators(format);
+}
+
+
+
+void Format::ListOfWords::SetSeparators(const string &format)
+{
+	separators.clear();
+	const size_t sz = format.length();
+	size_t n = 2;
+	size_t m = 0;
+	const char delm = sz > 0 ? format[0] : 'x';
+	string token;
+	for(size_t i = 1; i < sz; ++i)
+	{
+		if(format[i] != delm)
+			token += format[i];
+		if(format[i] == delm || i == sz - 1)
+		{
+			if(m == 0)
+				separators.emplace_back(vector<string>{ token });
+			else
+				separators.back().push_back(token);
+			token.clear();
+			++m;
+			if(n == m + 1)
+			{
+				++n;
+				m = 0;
+			}
+		}
+	}
+	if(m != 0)
+		// Something wrong.
+		separators.pop_back();
+	if(separators.empty())
+		separators.emplace_back(vector<string>{ ", " });
+}
+
+
+
+string Format::ListOfWords::GetList(size_t n, const function<string()> &GetAndNext)
+{
+	string s;
+	if(n == 0)
+		return s;
+	else if (n == 1)
+	{
+		s = GetAndNext();
+		return s;
+	}
+	else
+	{
+		const size_t m = separators.size() > n - 2 ? n - 2 : separators.size() - 1;
+		const size_t sz = separators[m].size();
+		const size_t firstHalf = (sz - 1) / 2;
+		const size_t secondHalf = n - 1 - (sz - firstHalf);
+		size_t j = 0;
+		s = GetAndNext();
+		for(size_t i = 0; i < n - 1; ++i)
+		{
+			s += separators[m][j];
+			s += GetAndNext();
+			if(i < firstHalf || secondHalf <= i)
+				++j;
+		}
+		return s;
+	}
 }

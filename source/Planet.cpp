@@ -16,6 +16,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Format.h"
 #include "GameData.h"
 #include "Government.h"
+#include "LocaleInfo.h"
 #include "PlayerInfo.h"
 #include "Politics.h"
 #include "Random.h"
@@ -25,10 +26,11 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "System.h"
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
-	const string WORMHOLE = "wormhole";
-	const string PLANET = "planet";
+	const T_ WORMHOLE = T_("wormhole");
+	const T_ PLANET = T_("planet");
 }
 
 
@@ -39,6 +41,7 @@ void Planet::Load(const DataNode &node, const Set<Sale<Ship>> &ships, const Set<
 	if(node.Size() < 2)
 		return;
 	name = node.Token(1);
+	displayName = LocaleInfo::TranslateData(name, "planet");
 	
 	// If this planet has been loaded before, these sets of items should be
 	// reset instead of appending to them:
@@ -148,7 +151,7 @@ void Planet::Load(const DataNode &node, const Set<Sale<Ship>> &ships, const Set<
 			string &text = (key == "description") ? description : spaceport;
 			if(!text.empty() && !value.empty() && value[0] > ' ')
 				text += '\t';
-			text += value;
+			text += LocaleInfo::TranslateData(value);
 			text += '\n';
 		}
 		else if(key == "government")
@@ -193,18 +196,20 @@ void Planet::Load(const DataNode &node, const Set<Sale<Ship>> &ships, const Set<
 
 
 // Get the name of the planet.
-const string &Planet::Name() const
+string Planet::Name() const
 {
-	static const string UNKNOWN = "???";
+	static const T_ UNKNOWN = T_("???", "Planet");
 	if(IsWormhole())
 		return UNKNOWN;
-	return name;
+	return displayName;
 }
 
 
 
-// Get the name used for this planet in the data files.
-const string &Planet::TrueName() const
+// Get the internal name used for this planet. This name is unique and is
+// never modified by translation, so it can be used in condition
+// variables, etc.
+const string &Planet::Identifier() const
 {
 	return name;
 }
@@ -244,14 +249,15 @@ const set<string> &Planet::Attributes() const
 
 
 // Get planet's noun descriptor from attributes
-const string &Planet::Noun() const
+// This function may return a translated text.
+string Planet::Noun() const
 {
 	if(IsWormhole())
 		return WORMHOLE;
 	
 	for(const string &attribute : attributes)
-		if(attribute == "moon" || attribute == "station")
-			return attribute;
+		if(attribute == G("moon") || attribute == G("station"))
+			return T(attribute);
 	
 	return PLANET;
 }
@@ -496,10 +502,10 @@ void Planet::Bribe(bool fullAccess) const
 // Demand tribute, and get the planet's response.
 string Planet::DemandTribute(PlayerInfo &player) const
 {
-	if(player.GetCondition("tribute: " + name))
-		return "We are already paying you as much as we can afford.";
+	if(player.GetCondition("tribute: " + displayName))
+		return T("We are already paying you as much as we can afford.");
 	if(!tribute || !defenseFleet || !defenseCount || player.GetCondition("combat rating") < defenseThreshold)
-		return "Please don't joke about that sort of thing.";
+		return T("Please don't joke about that sort of thing.");
 	
 	// The player is scary enough for this planet to take notice. Check whether
 	// this is the first demand for tribute, or not.
@@ -508,7 +514,7 @@ string Planet::DemandTribute(PlayerInfo &player) const
 		isDefending = true;
 		GameData::GetPolitics().Offend(defenseFleet->GetGovernment(), ShipEvent::PROVOKE);
 		GameData::GetPolitics().Offend(GetGovernment(), ShipEvent::ATROCITY);
-		return "Our defense fleet will make short work of you.";
+		return T("Our defense fleet will make short work of you.");
 	}
 	
 	// The player has already demanded tribute. Have they killed off the entire
@@ -522,11 +528,12 @@ string Planet::DemandTribute(PlayerInfo &player) const
 		}
 	
 	if(!isDefeated)
-		return "We're not ready to surrender yet.";
+		return T("We're not ready to surrender yet.");
 	
 	player.Conditions()["tribute: " + name] = tribute;
 	GameData::GetPolitics().DominatePlanet(this);
-	return "We surrender. We will pay you " + Format::Number(tribute) + " credits per day to leave us alone.";
+	return Format::StringF({T("We surrender. We will pay you %1% credits per day to leave us alone."),
+		Format::Number(tribute)});
 }
 
 

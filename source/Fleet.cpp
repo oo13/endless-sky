@@ -418,7 +418,7 @@ vector<shared_ptr<Ship>> Fleet::Instantiate(const Variant &variant) const
 	vector<shared_ptr<Ship>> placed;
 	for(const Ship *model : variant.ships)
 	{
-		if(model->ModelName().empty())
+		if(model->ModelIdentifier().empty())
 		{
 			Files::LogError("Skipping unknown ship in fleet \"" + fleetName + "\".");
 			continue;

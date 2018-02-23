@@ -14,11 +14,13 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "DataNode.h"
 #include "DataWriter.h"
+#include "LocaleInfo.h"
 
 #include <algorithm>
 #include <cmath>
 
 using namespace std;
+using namespace Gettext;
 
 
 
@@ -41,7 +43,8 @@ int64_t Mortgage::Maximum(int64_t annualRevenue, int creditScore, int64_t curren
 
 // Create a new mortgage of the given amount.
 Mortgage::Mortgage(int64_t principal, int creditScore, int term)
-	: type(creditScore <= 0 ? "Fine" : "Mortgage"),
+	: type(creditScore <= 0 ? G("Fine") : G("Mortgage")),
+	typeName(),
 	principal(principal),
 	interest((600 - creditScore / 2) * .00001),
 	interestString("0." + to_string(600 - creditScore / 2) + "%"),
@@ -66,6 +69,7 @@ void Mortgage::Load(const DataNode &node)
 		type = node.Token(1);
 	else
 		type = "Mortgage";
+	typeName = "";
 	
 	for(const DataNode &child : node)
 	{
@@ -136,6 +140,16 @@ int64_t Mortgage::PayExtra(int64_t amount)
 const string &Mortgage::Type() const
 {
 	return type;
+}
+
+
+
+// The TypeName() is equivallent Type(), but this function can return a translated text.
+const std::string &Mortgage::TypeName() const
+{
+	if(typeName.empty())
+		typeName = T(type);
+	return typeName;
 }
 
 

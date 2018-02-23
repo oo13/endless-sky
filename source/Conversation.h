@@ -48,7 +48,7 @@ public:
 	
 public:
 	// Read or write to files.
-	void Load(const DataNode &node);
+	void Load(const DataNode &node, const std::string &context = "");
 	void Save(DataWriter &out) const;
 	// Check if any data is loaded in this conversation object.
 	bool IsEmpty() const;

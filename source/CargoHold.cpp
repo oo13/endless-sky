@@ -115,7 +115,7 @@ void CargoHold::Save(DataWriter &out) const
 	
 	bool firstOutfit = true;
 	for(const auto &it : outfits)
-		if(it.second && !it.first->Name().empty())
+		if(it.second && !it.first->Identifier().empty())
 		{
 			// It is possible this cargo hold contained no commodities, meaning
 			// we must print the opening tag now.
@@ -134,7 +134,7 @@ void CargoHold::Save(DataWriter &out) const
 			}
 			firstOutfit = false;
 			
-			out.Write(it.first->Name(), it.second);
+			out.Write(it.first->Identifier(), it.second);
 		}
 	// Back out any indentation blocks that are set, depending on what sorts of
 	// cargo were written to the file.

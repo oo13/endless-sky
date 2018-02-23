@@ -22,6 +22,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Interface.h"
 #include "Information.h"
 #include "LoadPanel.h"
+#include "LocaleInfo.h"
 #include "MainPanel.h"
 #include "Planet.h"
 #include "PlayerInfo.h"
@@ -38,6 +39,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "gl_header.h"
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	bool isReady = false;
@@ -110,12 +112,12 @@ void MenuPanel::Draw()
 	{
 		info.SetCondition("no pilot loaded");
 		info.SetString("pilot", font.TruncateMiddle(player.FirstName() + " " + player.LastName(), 165));
-		info.SetString("ship", "You have died.");
+		info.SetString("ship", T("You have died."));
 	}
 	else
 	{
 		info.SetCondition("no pilot loaded");
-		info.SetString("pilot", "No Pilot Loaded");
+		info.SetString("pilot", T("No Pilot Loaded", "MenuPanel"));
 	}
 	
 	GameData::Interfaces().Get("menu background")->Draw(info, this);

@@ -82,8 +82,12 @@ public:
 	void Link(System *other);
 	void Unlink(System *other);
 	
-	// Get this system's name and position (in the star map).
+	// Get the name of the system.
 	const std::string &Name() const;
+	// Get the internal name used for this system. This name is unique and is
+	// never modified by translation, so it can be used in condition
+	// variables, etc.
+	const std::string &Identifier() const;
 	const Point &Position() const;
 	// Get this system's government.
 	const Government *GetGovernment() const;
@@ -163,6 +167,7 @@ private:
 private:
 	// Name and position (within the star map) of this system.
 	std::string name;
+	std::string displayName;
 	Point position;
 	const Government *government = nullptr;
 	std::string music;

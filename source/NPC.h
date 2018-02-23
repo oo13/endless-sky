@@ -41,9 +41,9 @@ class NPC {
 public:
 	NPC() = default;
 	// Construct and Load() at the same time.
-	NPC(const DataNode &node);
+	NPC(const DataNode &node, const std::string &context);
 	
-	void Load(const DataNode &node);
+	void Load(const DataNode &node, const std::string &context);
 	// Note: the Save() function can assume this is an instantiated mission, not
 	// a template, so fleets will be replaced by individual ships already.
 	void Save(DataWriter &out) const;

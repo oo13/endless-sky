@@ -16,6 +16,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DataNode.h"
 #include "Fleet.h"
 #include "GameData.h"
+#include "LocaleInfo.h"
 #include "Phrase.h"
 #include "Politics.h"
 #include "ShipEvent.h"
@@ -50,7 +51,10 @@ Government::Government()
 void Government::Load(const DataNode &node)
 {
 	if(node.Size() >= 2)
+	{
 		name = node.Token(1);
+		displayName = LocaleInfo::TranslateData(name, "government");
+	}
 	
 	for(const DataNode &child : node)
 	{
@@ -132,6 +136,16 @@ void Government::Load(const DataNode &node)
 
 // Get the name of this government.
 const string &Government::GetName() const
+{
+	return displayName;
+}
+
+
+
+// Get the internal name used for this goverenment. This name is unique and
+// is never modified by translation, so it can be used in condition
+// variables, etc.
+const std::string &Government::GetIdentifier() const
 {
 	return name;
 }

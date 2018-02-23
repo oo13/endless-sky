@@ -13,6 +13,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Trade.h"
 
 #include "DataNode.h"
+#include "LocaleInfo.h"
 
 #include <algorithm>
 
@@ -36,13 +37,14 @@ void Trade::Load(const DataNode &node)
 				it = list.insert(it, Commodity());
 			
 			it->name = child.Token(1);
+			it->displayName = LocaleInfo::TranslateData(it->name, "commodity");
 			if(!isSpecial)
 			{
 				it->low = child.Value(2);
 				it->high = child.Value(3);
 			}
 			for(const DataNode &grand : child)
-				it->items.push_back(grand.Token(0));
+				it->items.push_back(LocaleInfo::TranslateData(grand.Token(0), "commodity"));
 		}
 		else if(child.Token(0) == "clear")
 			commodities.clear();

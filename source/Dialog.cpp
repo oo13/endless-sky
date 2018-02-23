@@ -19,6 +19,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Font.h"
 #include "FontSet.h"
 #include "GameData.h"
+#include "LocaleInfo.h"
 #include "MapDetailPanel.h"
 #include "PlayerInfo.h"
 #include "Point.h"
@@ -32,6 +33,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <functional>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	const int WIDTH = 250;
@@ -141,7 +143,7 @@ void Dialog::Draw()
 	const Color &back = *GameData::Colors().Get("faint");
 	if(canCancel)
 	{
-		string cancelText = isMission ? "Decline" : "Cancel";
+		string cancelText = isMission ? T("Decline") : T("Cancel");
 		cancelPos = pos + Point(10., 0.);
 		SpriteShader::Draw(cancel, cancelPos);
 		Point labelPos(
@@ -149,7 +151,7 @@ void Dialog::Draw()
 			cancelPos.Y() - .5 * font.Height());
 		font.Draw(cancelText, labelPos, !okIsActive ? bright : dim);
 	}
-	string okText = isMission ? "Accept" : "OK";
+	string okText = isMission ? T("Accept") : T("OK");
 	okPos = pos + Point(90., 0.);
 	Point labelPos(
 		okPos.X() - .5 * font.Width(okText),

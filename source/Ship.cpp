@@ -16,8 +16,10 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DataNode.h"
 #include "DataWriter.h"
 #include "Effect.h"
+#include "Format.h"
 #include "GameData.h"
 #include "Government.h"
+#include "LocaleInfo.h"
 #include "Mask.h"
 #include "Messages.h"
 #include "Phrase.h"
@@ -33,6 +35,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <iostream>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	const vector<string> BAY_TYPE = {"drone", "fighter"};
@@ -76,15 +79,15 @@ namespace {
 }
 
 const vector<string> Ship::CATEGORIES = {
-	"Transport",
-	"Light Freighter",
-	"Heavy Freighter",
-	"Interceptor",
-	"Light Warship",
-	"Medium Warship",
-	"Heavy Warship",
-	"Fighter",
-	"Drone"
+	G("Transport"),
+	G("Light Freighter"),
+	G("Heavy Freighter"),
+	G("Interceptor"),
+	G("Light Warship"),
+	G("Medium Warship"),
+	G("Heavy Warship"),
+	G("Fighter"),
+	G("Drone")
 };
 
 
@@ -132,11 +135,11 @@ void Ship::Load(const DataNode &node)
 		if(key == "sprite")
 			LoadSprite(child);
 		else if(key == "name" && child.Size() >= 2)
-			name = child.Token(1);
+			name = LocaleInfo::TranslateData(child.Token(1), "ship");
 		else if(key == "plural" && child.Size() >= 2)
 			pluralModelName = child.Token(1);
 		else if(key == "noun" && child.Size() >= 2)
-			noun = child.Token(1);
+			noun = LocaleInfo::TranslateData(child.Token(1), "ship");
 		else if(key == "swizzle" && child.Size() >= 2)
 			customSwizzle = child.Value(1);
 		else if(key == "attributes" || add)
@@ -276,13 +279,17 @@ void Ship::Load(const DataNode &node)
 				description.clear();
 				hasDescription = true;
 			}
-			description += child.Token(1);
+			description += LocaleInfo::TranslateData(child.Token(1));
 			description += '\n';
 		}
 		else if(key != "actions")
 			child.PrintTrace("Skipping unrecognized attribute:");
 	}
+	
+	if(noun.empty())
+		noun = LocaleInfo::TranslateData("ship", "ship");
 }
+
 
 
 
@@ -392,7 +399,7 @@ void Ship::FinishLoading(bool isNewInstance)
 			cerr << modelName;
 			if(!name.empty())
 				cerr << " \"" << name << "\"";
-			cerr << ": outfit \"" << it.first->Name() << "\" equipped but not included in outfit list." << endl;
+			cerr << ": outfit \"" << it.first->Identifier() << "\" equipped but not included in outfit list." << endl;
 		}
 		else if(!it.first->IsWeapon())
 		{
@@ -402,7 +409,7 @@ void Ship::FinishLoading(bool isNewInstance)
 			cerr << modelName;
 			if(!name.empty())
 				cerr << " \"" << name << "\"";
-			cerr << ": outfit \"" << it.first->Name() << "\" is not a weapon, but is installed as one." << endl;
+			cerr << ": outfit \"" << it.first->Identifier() << "\" is not a weapon, but is installed as one." << endl;
 		}
 	}
 	
@@ -425,7 +432,7 @@ void Ship::FinishLoading(bool isNewInstance)
 	attributes = baseAttributes;
 	for(const auto &it : outfits)
 	{
-		if(it.first->Name().empty())
+		if(it.first->Identifier().empty())
 		{
 			cerr << "Unrecognized outfit in " << modelName << " \"" << name << "\"" << endl;
 			continue;
@@ -457,11 +464,11 @@ void Ship::FinishLoading(bool isNewInstance)
 			cerr << modelName;
 			if(!name.empty())
 				cerr << " \"" << name << "\"";
-			cerr << ": outfit \"" << outfit->Name() << "\" installed as a ";
+			cerr << ": outfit \"" << outfit->Identifier() << "\" installed as a ";
 			cerr << (isTurret ? "turret but is a gun." : "gun but is a turret.");
 			cerr << "\n\t" << (isTurret ? "turret " : "gun ");
 			cerr << 2. * hardpoint.GetPoint().X() << " " << 2. * hardpoint.GetPoint().Y();
-			cerr << " \"" << outfit->Name() << "\"" << endl;
+			cerr << " \"" << outfit->Identifier() << "\"" << endl;
 		}
 	}
 	cargo.SetSize(attributes.Get("cargo space"));
@@ -529,9 +536,9 @@ void Ship::Save(DataWriter &out) const
 				if(it.first && it.second)
 				{
 					if(it.second == 1)
-						out.Write(it.first->Name());
+						out.Write(it.first->Identifier());
 					else
-						out.Write(it.first->Name(), it.second);
+						out.Write(it.first->Identifier(), it.second);
 				}
 		}
 		out.EndChild();
@@ -550,7 +557,7 @@ void Ship::Save(DataWriter &out) const
 			const char *type = (hardpoint.IsTurret() ? "turret" : "gun");
 			if(hardpoint.GetOutfit())
 				out.Write(type, 2. * hardpoint.GetPoint().X(), 2. * hardpoint.GetPoint().Y(),
-					hardpoint.GetOutfit()->Name());
+					hardpoint.GetOutfit()->Identifier());
 			else
 				out.Write(type, 2. * hardpoint.GetPoint().X(), 2. * hardpoint.GetPoint().Y());
 		}
@@ -575,17 +582,17 @@ void Ship::Save(DataWriter &out) const
 				out.Write("final explode", it.first->Name(), it.second);
 		
 		if(currentSystem)
-			out.Write("system", currentSystem->Name());
+			out.Write("system", currentSystem->Identifier());
 		else
 		{
 			shared_ptr<const Ship> parent = GetParent();
 			if(parent && parent->currentSystem)
-				out.Write("system", parent->currentSystem->Name());
+				out.Write("system", parent->currentSystem->Identifier());
 		}
 		if(landingPlanet)
-			out.Write("planet", landingPlanet->Name());
-		if(targetSystem && !targetSystem->Name().empty())
-			out.Write("destination system", targetSystem->Name());
+			out.Write("planet", landingPlanet->Identifier());
+		if(targetSystem && !targetSystem->Identifier().empty())
+			out.Write("destination system", targetSystem->Identifier());
 		if(isParked)
 			out.Write("parked");
 	}
@@ -601,16 +608,23 @@ const string &Ship::Name() const
 
 
 
-const string &Ship::ModelName() const
+string Ship::ModelName(unsigned long n) const
 {
-	return modelName;
+	return LocaleInfo::TranslateData(modelName, pluralModelName, "ship", n);
 }
 
 
 
-const string &Ship::PluralModelName() const
+string Ship::PluralModelName() const
 {
-	return pluralModelName;
+	return LocaleInfo::TranslateData(pluralModelName, "ship");
+}
+
+
+
+const string &Ship::ModelIdentifier() const
+{
+	return modelName;
 }
 
 
@@ -618,8 +632,7 @@ const string &Ship::PluralModelName() const
 // Get the generic noun (e.g. "ship") to be used when describing this ship.
 const string &Ship::Noun() const
 {
-	static const string SHIP = "ship";
-	return noun.empty() ? SHIP : noun;
+	return noun;
 }
 
 
@@ -1180,9 +1193,10 @@ void Ship::Move(vector<Visual> &visuals, list<shared_ptr<Flotsam>> &flotsam)
 	{
 		pilotError = 30;
 		if(parent.lock() || !isYours)
-			Messages::Add(name + " is moving erratically because there are not enough crew to pilot it.");
+			Messages::Add(Format::StringF({T("%1% is moving erratically because "
+				"there are not enough crew to pilot it."), name}));
 		else
-			Messages::Add("Your ship is moving erratically because you do not have enough crew to pilot it.");
+			Messages::Add(T("Your ship is moving erratically because you do not have enough crew to pilot it."));
 	}
 	else
 		pilotOkay = 30;
@@ -1341,7 +1355,7 @@ void Ship::Move(vector<Visual> &visuals, list<shared_ptr<Flotsam>> &flotsam)
 					// boarding sequence (including locking on to the ship) but
 					// not to actually board, if they are cloaked.
 					if(isYours)
-						Messages::Add("You cannot board a ship while cloaked.");
+						Messages::Add(T("You cannot board a ship while cloaked."));
 				}
 				else
 				{
@@ -1349,8 +1363,9 @@ void Ship::Move(vector<Visual> &visuals, list<shared_ptr<Flotsam>> &flotsam)
 					bool isEnemy = government->IsEnemy(target->government);
 					if(isEnemy && Random::Real() < target->Attributes().Get("self destruct"))
 					{
-						Messages::Add("The " + target->ModelName() + " \"" + target->Name()
-							+ "\" has activated its self-destruct mechanism.");
+						// TRANSLATORS: %1%: model name, %2% name
+						Messages::Add(Format::StringF({T("The %1% \"%2%\" has activated its self-destruct mechanism."),
+							target->ModelName(), target->Name()}));
 						targetShip.lock()->SelfDestruct();
 					}
 					else
@@ -1693,22 +1708,28 @@ int Ship::Scan()
 	if(startedScanning && isYours)
 	{
 		if(!target->Name().empty())
-			Messages::Add("Attempting to scan the " + target->Noun() + " \"" + target->Name() + "\".", false);
+			// TRANSLATORS: %1%: noun, %2%: name
+			Messages::Add(Format::StringF({T("Attempting to scan the %1% \"%2%\"."),
+				target->Noun(), target->Name()}), false);
 		else
-			Messages::Add("Attempting to scan the selected " + target->Noun() + ".", false);
+			// TRANSLATORS: %1%: noun
+			Messages::Add(Format::StringF({T("Attempting to scan the selected %1%."), target->Noun()}), false);
 	}
 	else if(startedScanning && target->isYours)
-		Messages::Add("The " + government->GetName() + " " + Noun() + " \""
-			+ Name() + "\" is attempting to scan you.", false);
+		// TRANSLATORS: %1%: governmane, %2%: noun, %3%: name
+		Messages::Add(Format::StringF({T("The %1% %2% \"%3%\" is attempting to scan you."),
+			government->GetName(), Noun(), Name()}), false);
 	
 	if(target->isYours && !isYours)
 	{
 		if(result & ShipEvent::SCAN_CARGO)
-			Messages::Add("The " + government->GetName() + " " + Noun() + " \""
-					+ Name() + "\" completed its scan of your cargo.");
+			// TRANSLATORS: %1%: governmane, %2%: noun, %3%: name
+			Messages::Add(Format::StringF({T("The %1% %2% \"%3%\" completed its scan of your cargo."),
+				government->GetName(), Noun(), Name()}));
 		if(result & ShipEvent::SCAN_OUTFITS)
-			Messages::Add("The " + government->GetName() + " " + Noun() + " \""
-					+ Name() + "\" completed its scan of your outfits.");
+			// TRANSLATORS: %1%: governmane, %2%: noun, %3%: name
+			Messages::Add(Format::StringF({T("The %1% %2% \"%3%\" completed its scan of your outfits."),
+				government->GetName(), Noun(), Name()}));
 	}
 	
 	return result;

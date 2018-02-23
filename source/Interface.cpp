@@ -18,6 +18,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "GameData.h"
 #include "Information.h"
 #include "LineShader.h"
+#include "LocaleInfo.h"
 #include "OutlineShader.h"
 #include "Panel.h"
 #include "Rectangle.h"
@@ -487,6 +488,7 @@ Interface::TextElement::TextElement(const DataNode &node, const Point &globalAnc
 	}
 	else
 		str = node.Token(1);
+	str = LocaleInfo::TranslateData(str, "interface");
 	
 	// This function will call ParseLine() for any line it does not recognize.
 	Load(node, globalAnchor);

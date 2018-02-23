@@ -15,11 +15,13 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DataNode.h"
 #include "DataWriter.h"
 #include "Format.h"
+#include "LocaleInfo.h"
 
 #include <algorithm>
 #include <sstream>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	// For tracking the player's average income, store daily net worth over this
@@ -147,7 +149,7 @@ string Account::Step(int64_t assets, int64_t salaries)
 			salariesOwed -= salariesPaid;
 			credits -= salariesPaid;
 			paid = false;
-			out << "You could not pay all your crew salaries. ";
+			out << T("You could not pay all your crew salaries. ");
 		}
 		else
 		{
@@ -167,7 +169,7 @@ string Account::Step(int64_t assets, int64_t salaries)
 		{
 			mortgage.MissPayment();
 			if(paid)
-				out << "You missed a mortgage payment. ";
+				out << T("You missed a mortgage payment. ");
 			paid = false;
 		}
 		else
@@ -205,24 +207,25 @@ string Account::Step(int64_t assets, int64_t salaries)
 	if(!(salariesPaid + mortgagesPaid + finesPaid))
 		return out.str();
 	
-	out << "You paid ";
+	// TRANSLATORS: "You paid " + s + " credits in crew salaries, " + m + "in mortgages, and " + f + " in fines."
+	out << T("You paid ");
 	
 	// If you made payments of all three types, the punctuation needs to
 	// include commas, so just handle that separately here.
 	if(salariesPaid && mortgagesPaid && finesPaid)
-		out << Format::Number(salariesPaid) << " credits in crew salaries, " << Format::Number(mortgagesPaid)
-			<< " in mortgages, and " << Format::Number(finesPaid) << " in fines.";
+		out << Format::Number(salariesPaid) << T(" credits in crew salaries, ") << Format::Number(mortgagesPaid)
+			<< T(" in mortgages, and ") << Format::Number(finesPaid) << T(" in fines.", "3");
 	else
 	{
 		if(salariesPaid)
 			out << Format::Number(salariesPaid) << ((mortgagesPaid || finesPaid) ?
-				" credits in crew salaries and " : " credits in crew salaries.");
+				T(" credits in crew salaries and ") : T(" credits in crew salaries."));
 		if(mortgagesPaid)
-			out << Format::Number(mortgagesPaid) << (salariesPaid ? " " : " credits ")
-				<< (finesPaid ? "in mortgage payments and " : "in mortgage payments.");
+			out << Format::Number(mortgagesPaid) << (salariesPaid ? T(" ", "Account") : T(" credits "))
+				<< (finesPaid ? T("in mortgage payments and ") : T("in mortgage payments."));
 		if(finesPaid)
 			out << Format::Number(finesPaid) << ((salariesPaid || mortgagesPaid) ?
-				" in fines." : " credits in fines.");
+				T(" in fines.") : T(" credits in fines.", "2 or 1"));
 	}
 	return out.str();
 }

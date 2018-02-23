@@ -28,6 +28,7 @@ class DataNode;
 class DataWriter {
 public:
 	// Constructor, specifying the file to write.
+	// If path is empty, no file will be created, but we can use GetString().
 	explicit DataWriter(const std::string &path);
 	// The file is not actually saved until the destructor is called. This makes
 	// it possible to write the whole file in a single chunk.
@@ -60,6 +61,8 @@ public:
   template <class A>
 	void WriteToken(const A &a);
 	
+	// Get a current data as a string.
+	std::string GetString() const;
 	
 private:
 	// Save path (in UTF-8).

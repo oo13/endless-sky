@@ -20,6 +20,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "CargoHold.h"
 #include "Command.h"
 #include "Flotsam.h"
+#include "LocaleInfo.h"
 #include "Outfit.h"
 #include "Personality.h"
 #include "Point.h"
@@ -116,8 +117,13 @@ public:
 	const std::string &Name() const;
 	
 	// Get the name of this model of ship.
-	const std::string &ModelName() const;
-	const std::string &PluralModelName() const;
+	// n is amount of them.
+	std::string ModelName(unsigned long n = 1) const;
+	std::string PluralModelName() const;
+	// Get the internal name used for this ship model. This name is unique and
+	// is never modified by translation, so it can be used in condition
+	// variables, etc.
+	const std::string &ModelIdentifier() const;
 	// Get the generic noun (e.g. "ship") to be used when describing this ship.
 	const std::string &Noun() const;
 	// Get this ship's description.

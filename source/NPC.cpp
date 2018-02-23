@@ -19,6 +19,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Format.h"
 #include "GameData.h"
 #include "Government.h"
+#include "LocaleInfo.h"
 #include "Messages.h"
 #include "PlayerInfo.h"
 #include "Random.h"
@@ -30,18 +31,19 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <vector>
 
 using namespace std;
+using namespace Gettext;
 
 
 
 // Construct and Load() at the same time.
-NPC::NPC(const DataNode &node)
+NPC::NPC(const DataNode &node, const string &context)
 {
-	Load(node);
+	Load(node, context);
 }
 
 
 
-void NPC::Load(const DataNode &node)
+void NPC::Load(const DataNode &node, const string &context)
 {
 	// Any tokens after the "npc" tag list the things that must happen for this
 	// mission to succeed.
@@ -102,18 +104,18 @@ void NPC::Load(const DataNode &node)
 			{
 				if(!dialogText.empty())
 					dialogText += "\n\t";
-				dialogText += child.Token(i);
+				dialogText += LocaleInfo::TranslateData(child.Token(i));
 			}
 			for(const DataNode &grand : child)
 				for(int i = 0; i < grand.Size(); ++i)
 				{
 					if(!dialogText.empty())
 						dialogText += "\n\t";
-					dialogText += grand.Token(i);
+					dialogText += LocaleInfo::TranslateData(grand.Token(i));
 				}
 		}
 		else if(child.Token(0) == "conversation" && child.HasChildren())
-			conversation.Load(child);
+			conversation.Load(child, context);
 		else if(child.Token(0) == "conversation" && child.Size() > 1)
 			stockConversation = GameData::Conversations().Get(child.Token(1));
 		else if(child.Token(0) == "ship")
@@ -131,7 +133,7 @@ void NPC::Load(const DataNode &node)
 			{
 				// Loading a ship managed by GameData, i.e. "base models" and variants.
 				stockShips.push_back(GameData::Ships().Get(child.Token(1)));
-				shipNames.push_back(child.Token(1 + (child.Size() > 2)));
+				shipNames.push_back(LocaleInfo::TranslateData(child.Token(1 + (child.Size() > 2)), "ship"));
 			}
 			else
 			{
@@ -194,7 +196,7 @@ void NPC::Save(DataWriter &out) const
 			out.Write("accompany");
 		
 		if(government)
-			out.Write("government", government->GetName());
+			out.Write("government", government->GetIdentifier());
 		personality.Save(out);
 		
 		if(!dialogText.empty())
@@ -293,7 +295,7 @@ void NPC::Do(const ShipEvent &event, PlayerInfo &player, UI *ui, bool isVisible)
 	
 	// Check if the success status has changed. If so, display a message.
 	if(HasFailed() && !hasFailed && isVisible)
-		Messages::Add("Mission failed.");
+		Messages::Add(T("Mission failed."));
 	else if(ui && HasSucceeded(player.GetSystem()) && !hasSucceeded)
 	{
 		if(!conversation.IsEmpty())

@@ -19,6 +19,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Format.h"
 #include "GameData.h"
 #include "Government.h"
+#include "LocaleInfo.h"
 #include "MapOutfitterPanel.h"
 #include "MapShipyardPanel.h"
 #include "pi.h"
@@ -45,6 +46,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <vector>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	// Convert the angle between two vectors into a sortable angle, i.e an angle
@@ -291,14 +293,14 @@ void MapDetailPanel::DrawKey()
 	Point headerOff(-5., -.5 * font.Height());
 	Point textOff(10., -.5 * font.Height());
 	
-	static const string HEADER[] = {
-		"Trade prices:",
-		"Ships for sale:",
-		"Outfits for sale:",
-		"You have visited:",
-		"", // Special should never be active in this mode.
-		"Government:",
-		"System:"
+	static const T_ HEADER[] = {
+		T_("Trade prices:"),
+		T_("Ships for sale:"),
+		T_("Outfits for sale:"),
+		T_("You have visited:"),
+		T_("", "MapDetailPanel HEADER"), // Special should never be active in this mode.
+		T_("Government:"),
+		T_("System:")
 	};
 	const string &header = HEADER[-min(0, max(-6, commodity))];
 	font.Draw(header, pos + headerOff, medium);
@@ -324,9 +326,9 @@ void MapDetailPanel::DrawKey()
 	else if(commodity >= SHOW_OUTFITTER)
 	{
 		// Each system is colored by the number of outfits for sale.
-		static const string LABEL[2][4] = {
-			{"None", "1", "5", "10+"},
-			{"None", "1", "30", "60+"}};
+		static const T_ LABEL[2][4] = {
+			{T_("None", "LABEL"), T_("1"), T_("5"), T_("10+")},
+			{T_("None", "LABEL"), T_("1"), T_("30"), T_("60+")}};
 		static const double VALUE[4] = {-1., 0., .5, 1.};
 		
 		for(int i = 0; i < 4; ++i)
@@ -338,10 +340,10 @@ void MapDetailPanel::DrawKey()
 	}
 	else if(commodity == SHOW_VISITED)
 	{
-		static const string LABEL[3] = {
-			"All planets",
-			"Some",
-			"None"
+		static const T_ LABEL[3] = {
+			T_("All planets", "visited"),
+			T_("Some", "visited"),
+			T_("None", "visited")
 		};
 		for(int i = 0; i < 3; ++i)
 		{
@@ -373,30 +375,30 @@ void MapDetailPanel::DrawKey()
 		RingShader::Draw(pos, OUTER, INNER, ReputationColor(1e-1, true, false));
 		RingShader::Draw(pos + Point(12., 0.), OUTER, INNER, ReputationColor(1e2, true, false));
 		RingShader::Draw(pos + Point(24., 0.), OUTER, INNER, ReputationColor(1e4, true, false));
-		font.Draw("Friendly", pos + textOff + Point(24., 0.), dim);
+		font.Draw(T("Friendly"), pos + textOff + Point(24., 0.), dim);
 		pos.Y() += 20.;
 		
 		RingShader::Draw(pos, OUTER, INNER, ReputationColor(-1e-1, false, false));
 		RingShader::Draw(pos + Point(12., 0.), OUTER, INNER, ReputationColor(-1e2, false, false));
 		RingShader::Draw(pos + Point(24., 0.), OUTER, INNER, ReputationColor(-1e4, false, false));
-		font.Draw("Hostile", pos + textOff + Point(24., 0.), dim);
+		font.Draw(T("Hostile"), pos + textOff + Point(24., 0.), dim);
 		pos.Y() += 20.;
 		
 		RingShader::Draw(pos, OUTER, INNER, ReputationColor(0., false, false));
-		font.Draw("Restricted", pos + textOff, dim);
+		font.Draw(T("Restricted"), pos + textOff, dim);
 		pos.Y() += 20.;
 		
 		RingShader::Draw(pos, OUTER, INNER, ReputationColor(0., false, true));
-		font.Draw("Dominated", pos + textOff, dim);
+		font.Draw(T("Dominated"), pos + textOff, dim);
 		pos.Y() += 20.;
 	}
 	
 	RingShader::Draw(pos, OUTER, INNER, UninhabitedColor());
-	font.Draw("Uninhabited", pos + textOff, dim);
+	font.Draw(T("Uninhabited"), pos + textOff, dim);
 	pos.Y() += 20.;
 	
 	RingShader::Draw(pos, OUTER, INNER, UnexploredColor());
-	font.Draw("Unexplored", pos + textOff, dim);
+	font.Draw(T("Unexplored"), pos + textOff, dim);
 }
 
 
@@ -417,12 +419,12 @@ void MapDetailPanel::DrawInfo()
 	
 	const Font &font = FontSet::Get(14);
 	string systemName = player.KnowsName(selectedSystem) ?
-		selectedSystem->Name() : "Unexplored System";
+		selectedSystem->Name() : T("Unexplored System", "MapDetailPanel");
 	font.Draw(systemName, uiPoint + Point(-90., -7.), medium);
 	
 	governmentY = uiPoint.Y() + 10.;
 	string gov = player.HasVisited(selectedSystem) ?
-		selectedSystem->GetGovernment()->GetName() : "Unknown Government";
+		selectedSystem->GetGovernment()->GetName() : T("Unknown Government");
 	font.Draw(gov, uiPoint + Point(-90., 13.), (commodity == SHOW_GOVERNMENT) ? medium : dim);
 	if(commodity == SHOW_GOVERNMENT)
 		PointerShader::Draw(uiPoint + Point(-90., 20.), Point(1., 0.),
@@ -454,10 +456,10 @@ void MapDetailPanel::DrawInfo()
 					planet == selectedPlanet ? medium : dim);
 				
 				bool hasSpaceport = planet->HasSpaceport();
-				string reputationLabel = !hasSpaceport ? "No Spaceport" :
-					GameData::GetPolitics().HasDominated(planet) ? "Dominated" :
-					planet->GetGovernment()->IsEnemy() ? "Hostile" :
-					planet->CanLand() ? "Friendly" : "Restricted";
+				string reputationLabel = !hasSpaceport ? T("No Spaceport") :
+					GameData::GetPolitics().HasDominated(planet) ? T("Dominated") :
+					planet->GetGovernment()->IsEnemy() ? T("Hostile") :
+					planet->CanLand() ? T("Friendly") : T("Restricted");
 				font.Draw(reputationLabel,
 					uiPoint + Point(-60., -32.),
 					hasSpaceport ? medium : faint);
@@ -465,14 +467,14 @@ void MapDetailPanel::DrawInfo()
 					PointerShader::Draw(uiPoint + Point(-60., -25.), Point(1., 0.),
 						10., 10., 0., medium);
 				
-				font.Draw("Shipyard",
+				font.Draw(T("Shipyard"),
 					uiPoint + Point(-60., -12.),
 					planet->HasShipyard() ? medium : faint);
 				if(commodity == SHOW_SHIPYARD)
 					PointerShader::Draw(uiPoint + Point(-60., -5.), Point(1., 0.),
 						10., 10., 0., medium);
 				
-				font.Draw("Outfitter",
+				font.Draw(T("Outfitter"),
 					uiPoint + Point(-60., 8.),
 					planet->HasOutfitter() ? medium : faint);
 				if(commodity == SHOW_OUTFITTER)
@@ -480,7 +482,8 @@ void MapDetailPanel::DrawInfo()
 						10., 10., 0., medium);
 				
 				bool hasVisited = player.HasVisited(planet);
-				font.Draw(hasVisited ? "(has been visited)" : "(not yet visited)",
+				font.Draw(hasVisited ?
+					T("(has been visited)") : T("(not yet visited)"),
 					uiPoint + Point(-70., 28.),
 					dim);
 				if(commodity == SHOW_VISITED)
@@ -507,7 +510,7 @@ void MapDetailPanel::DrawInfo()
 			isSelected = (&commodity == &GameData::Commodities()[this->commodity]);
 		const Color &color = isSelected ? medium : dim;
 		
-		font.Draw(commodity.name, uiPoint, color);
+		font.Draw(commodity.displayName, uiPoint, color);
 		
 		string price;
 		
@@ -520,21 +523,21 @@ void MapDetailPanel::DrawInfo()
 			// thus has no prices to compare to.
 			bool noCompare = (!player.GetSystem() || !player.GetSystem()->IsInhabited(player.Flagship()));
 			if(!value)
-				price = "----";
+				price = T("----", "MapDetailPanel");
 			else if(noCompare || player.GetSystem() == selectedSystem || !localValue)
 				price = to_string(value);
 			else
 			{
 				value -= localValue;
-				price += "(";
 				if(value > 0)
-					price += '+';
-				price += to_string(value);
-				price += ")";
+					// TRANSLATORS: %1%: value
+					price += Format::StringF({T("(+%1%)"), to_string(value)});
+				else
+					price += Format::StringF({T("(%1%)"), to_string(value)});
 			}
 		}
 		else
-			price = (hasVisited ? "n/a" : "?");
+			price = (hasVisited ? T("n/a") : T("?"));
 		
 		Point pos = uiPoint + Point(140. - font.Width(price), 0.);
 		font.Draw(price, pos, color);

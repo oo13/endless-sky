@@ -18,6 +18,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "GameData.h"
 #include "Information.h"
 #include "Interface.h"
+#include "LocaleInfo.h"
 #include "LogbookPanel.h"
 #include "MissionPanel.h"
 #include "PlayerInfo.h"
@@ -33,6 +34,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <cmath>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	// Number of lines per page of the fleet listing.
@@ -41,7 +43,9 @@ namespace {
 	// Find any condition strings that begin with the given prefix, and convert
 	// them to strings ending in the given suffix (if any). Return those strings
 	// plus the values of the conditions.
-	vector<pair<int, string>> Match(const PlayerInfo &player, const string &prefix, const string &suffix)
+	// The conv function may translate the string.
+	vector<pair<int, string>> Match(const PlayerInfo &player, const string &prefix,
+		const string &suffix, string (*conv)(const string&))
 	{
 		vector<pair<int, string>> match;
 		
@@ -51,7 +55,7 @@ namespace {
 			if(it->first.compare(0, prefix.length(), prefix))
 				break;
 			if(it->second > 0)
-				match.push_back(pair<int, string>(it->second, it->first.substr(prefix.length()) + suffix));
+				match.push_back(pair<int, string>(it->second, conv(it->first.substr(prefix.length()) + suffix)));
 		}
 		return match;
 	}
@@ -66,7 +70,7 @@ namespace {
 		
 		if(otherCount > 0 && maxCount > 0)
 		{
-			list[maxCount - 1].second = "(" + to_string(otherCount + 1) + " Others)";
+			list[maxCount - 1].second = Format::StringF({T("(%1% Others)"), to_string(otherCount + 1)});
 			while(otherCount--)
 			{
 				list[maxCount - 1].first += list.back().first;
@@ -475,10 +479,10 @@ void PlayerInfoPanel::DrawPlayer(const Rectangle &bounds)
 	table.DrawAt(bounds.TopLeft() + Point(10., 8.));
 	
 	// Header row.
-	table.Draw("player:", dim);
+	table.Draw(T("player:"), dim);
 	table.Draw(player.FirstName() + " " + player.LastName(), bright);
-	table.Draw("net worth:", dim);
-	table.Draw(Format::Number(player.Accounts().NetWorth()) + " credits", bright);
+	table.Draw(T("net worth:"), dim);
+	table.Draw(Format::Number(player.Accounts().NetWorth()) + T(" credits", "PlayerInfoPanel"), bright);
 	
 	// Determine the player's combat rating.
 	int combatLevel = log(max(1, player.GetCondition("combat rating")));
@@ -487,7 +491,7 @@ void PlayerInfoPanel::DrawPlayer(const Rectangle &bounds)
 	{
 		table.DrawGap(10);
 		table.DrawUnderline(dim);
-		table.Draw("combat rating:", bright);
+		table.Draw(T("combat rating:"), bright);
 		table.Advance();
 		table.DrawGap(5);
 		
@@ -508,30 +512,33 @@ void PlayerInfoPanel::DrawPlayer(const Rectangle &bounds)
 		
 		table.DrawGap(10);
 		table.DrawUnderline(dim);
-		table.Draw("piracy threat:", bright);
+		table.Draw(T("piracy threat:"), bright);
 		table.Draw(Format::Number(lround(100 * prob)) + "%", dim);
 		table.DrawGap(5);
 		
 		// Format the attraction and deterrence levels with tens places, so it
 		// is clear which is higher even if they round to the same level.
-		table.Draw("cargo: " + attractionRating, dim);
+		table.Draw(T("cargo: ") + attractionRating, dim);
 		table.Draw("(+" + Format::Decimal(attractionLevel, 1) + ")", dim);
 		table.DrawGap(5);
-		table.Draw("fleet: " + deterrenceRating, dim);
+		table.Draw(T("fleet: ") + deterrenceRating, dim);
 		table.Draw("(-" + Format::Decimal(deterrenceLevel, 1) + ")", dim);
 	}
 	// Other special information:
-	auto salary = Match(player, "salary: ", "");
+	auto ConditionNameOfSalary = [](const string &s) -> string { return LocaleInfo::TranslateData(s, "salary: "); };
+	auto salary = Match(player, "salary: ", "", ConditionNameOfSalary);
 	sort(salary.begin(), salary.end());
-	DrawList(salary, table, "salary:", 4);
+	DrawList(salary, table, T("salary:"), 4);
 	
-	auto tribute = Match(player, "tribute: ", "");
+	auto DisplayNameOfPlanet = [](const string &s) -> string { return GameData::Planets().Get(s)->Name(); };
+	auto tribute = Match(player, "tribute: ", "", DisplayNameOfPlanet);
 	sort(tribute.begin(), tribute.end());
-	DrawList(tribute, table, "tribute:", 4);
+	DrawList(tribute, table, T("tribute:"), 4);
 	
 	int maxRows = static_cast<int>(250. - 30. - table.GetPoint().Y()) / 20;
-	auto licenses = Match(player, "license: ", " License");
-	DrawList(licenses, table, "licenses:", maxRows, false);
+	auto ConditionNameOfLicense = [](const string &s) -> string { return LocaleInfo::TranslateData(s, "license: "); };
+	auto licenses = Match(player, "license: ", " License", ConditionNameOfLicense);
+	DrawList(licenses, table, T("licenses:"), maxRows, false);
 }
 
 
@@ -564,13 +571,13 @@ void PlayerInfoPanel::DrawFleet(const Rectangle &bounds)
 	// Header row.
 	table.DrawUnderline(dim);
 	table.SetColor(bright);
-	table.Draw("ship");
-	table.Draw("model");
-	table.Draw("system");
-	table.Draw("shields");
-	table.Draw("hull");
-	table.Draw("fuel");
-	table.Draw("crew");
+	table.Draw(T("ship", "PlayerInfoPanel HEADER"));
+	table.Draw(T("model"));
+	table.Draw(T("system"));
+	table.Draw(T("shields"));
+	table.Draw(T("hull"));
+	table.Draw(T("fuel"));
+	table.Draw(T("crew"));
 	table.DrawGap(5);
 	
 	// Loop through all the player's ships.
@@ -619,7 +626,7 @@ void PlayerInfoPanel::DrawFleet(const Rectangle &bounds)
 		int crewCount = ship.Crew();
 		if(&ship != player.Flagship())
 			crewCount = min(crewCount, ship.RequiredCrew());
-		string crew = (ship.IsParked() ? "Parked" : to_string(crewCount));
+		string crew = (ship.IsParked() ? T("Parked") : to_string(crewCount));
 		table.Draw(crew);
 		
 		++index;

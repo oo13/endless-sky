@@ -21,6 +21,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Format.h"
 #include "GameData.h"
 #include "Hardpoint.h"
+#include "LocaleInfo.h"
 #include "Outfit.h"
 #include "Planet.h"
 #include "PlayerInfo.h"
@@ -37,11 +38,12 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <memory>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	string Tons(int tons)
 	{
-		return to_string(tons) + (tons == 1 ? " ton" : " tons");
+		return to_string(tons) + nT(" ton", " tons", tons);
 	}
 }
 
@@ -154,9 +156,9 @@ void OutfitterPanel::DrawItem(const string &name, const Point &point, int scroll
 		
 		if(maxCount)
 		{
-			string label = "installed: " + to_string(minCount);
+			string label = Format::StringF({T("installed: %1%"), to_string(minCount)});
 			if(maxCount > minCount)
-				label += " - " + to_string(maxCount);
+				label += Format::StringF({T(" - %1%"), to_string(maxCount)});
 		
 			Point labelPos = point + Point(-OUTFIT_SIZE / 2 + 20, OUTFIT_SIZE / 2 - 38);
 			font.Draw(label, labelPos, bright);
@@ -171,13 +173,13 @@ void OutfitterPanel::DrawItem(const string &name, const Point &point, int scroll
 	
 	string message;
 	if(cargo && stock)
-		message = "in cargo: " + to_string(cargo) + ", in stock: " + to_string(stock);
+		message = Format::StringF({T("in cargo: %1%, in stock: %2%"), to_string(cargo), to_string(stock)});
 	else if(cargo)
-		message = "in cargo: " + to_string(cargo);
+		message = Format::StringF({T("in cargo: %1%"), to_string(cargo)});
 	else if(stock)
-		message = "in stock: " + to_string(stock);
+		message = Format::StringF({T("in stock: %1%"), to_string(stock)});
 	else if(!outfitter.Has(outfit))
-		message = "(not sold here)";
+		message = T("(not sold here)");
 	if(!message.empty())
 	{
 		Point pos = point + Point(
@@ -244,7 +246,7 @@ bool OutfitterPanel::CanBuy() const
 	if(cost > player.Accounts().Credits() && !isInCargo)
 		return false;
 	
-	if(HasLicense(selectedOutfit->Name()))
+	if(HasLicense(selectedOutfit->Identifier()))
 		return false;
 	
 	if(!playerShip)
@@ -293,9 +295,9 @@ void OutfitterPanel::Buy()
 		}
 		
 		// Special case: licenses.
-		if(IsLicense(selectedOutfit->Name()))
+		if(IsLicense(selectedOutfit->Identifier()))
 		{
-			int &entry = player.Conditions()[LicenseName(selectedOutfit->Name())];
+			int &entry = player.Conditions()[LicenseName(selectedOutfit->Identifier())];
 			if(entry <= 0)
 			{
 				entry = true;
@@ -353,9 +355,8 @@ void OutfitterPanel::FailBuy() const
 	bool isInCargo = player.Cargo().Get(selectedOutfit);
 	if(!isInCargo && cost > credits)
 	{
-		GetUI()->Push(new Dialog("You cannot buy this outfit, because it costs "
-			+ Format::Number(cost) + " credits, and you only have "
-			+ Format::Number(credits) + "."));
+		GetUI()->Push(new Dialog(Format::StringF({T("You cannot buy this outfit, because it costs %1% credits, "
+			"and you only have %2%."), Format::Number(cost), Format::Number(credits)})));
 		return;
 	}
 	// Check that the player has any necessary licenses.
@@ -363,36 +364,37 @@ void OutfitterPanel::FailBuy() const
 	if(licenseCost < 0)
 	{
 		GetUI()->Push(new Dialog(
-			"You cannot buy this outfit, because it requires a license that you don't have."));
+			T("You cannot buy this outfit, because it requires a license that you don't have.")));
 		return;
 	}
 	if(!isInCargo && cost + licenseCost > credits)
 	{
 		GetUI()->Push(new Dialog(
-			"You don't have enough money to buy this outfit, because it will cost you an extra "
-			+ Format::Number(licenseCost) + " credits to buy the necessary licenses."));
+			Format::StringF({T("You don't have enough money to buy this outfit, because it will cost you an extra %1% "
+				"credits to buy the necessary licenses."), Format::Number(licenseCost)})));
 		return;
 	}
 	
 	if(!(outfitter.Has(selectedOutfit) || player.Stock(selectedOutfit) > 0 || isInCargo))
 	{
-		GetUI()->Push(new Dialog("You cannot buy this outfit here. "
+		// TRANSLATORS: %1%: Planet's noun
+		GetUI()->Push(new Dialog(Format::StringF({T("You cannot buy this outfit here. "
 			"It is being shown in the list because you have one installed in your ship, "
-			"but this " + planet->Noun() + " does not sell them."));
+			"but this %1% does not sell them."), planet->Noun()})));
 		return;
 	}
 	
 	if(selectedOutfit->Get("map"))
 	{
-		GetUI()->Push(new Dialog("You have already mapped all the systems shown by this map, "
-			"so there is no reason to buy another."));
+		GetUI()->Push(new Dialog(T("You have already mapped all the systems shown by this map, "
+			"so there is no reason to buy another.")));
 		return;
 	}
 	
-	if(HasLicense(selectedOutfit->Name()))
+	if(HasLicense(selectedOutfit->Identifier()))
 	{
-		GetUI()->Push(new Dialog("You already have one of these licenses, "
-			"so there is no reason to buy another."));
+		GetUI()->Push(new Dialog(T("You already have one of these licenses, "
+			"so there is no reason to buy another.")));
 		return;
 	}
 	
@@ -403,10 +405,9 @@ void OutfitterPanel::FailBuy() const
 	double outfitSpace = playerShip->Attributes().Get("outfit space");
 	if(outfitNeeded > outfitSpace)
 	{
-		string need =  to_string(outfitNeeded) + (outfitNeeded != 1. ? "tons" : "ton");
-		GetUI()->Push(new Dialog("You cannot install this outfit, because it takes up "
-			+ Tons(outfitNeeded) + " of outfit space, and this ship has "
-			+ Tons(outfitSpace) + " free."));
+		GetUI()->Push(new Dialog(Format::StringF({T("You cannot install this outfit, "
+			"because it takes up %1% of outfit space, and this ship has %2% free."),
+			Tons(outfitNeeded), Tons(outfitSpace)})));
 		return;
 	}
 	
@@ -414,10 +415,9 @@ void OutfitterPanel::FailBuy() const
 	double weaponSpace = playerShip->Attributes().Get("weapon capacity");
 	if(weaponNeeded > weaponSpace)
 	{
-		GetUI()->Push(new Dialog("Only part of your ship's outfit capacity is usable for weapons. "
-			"You cannot install this outfit, because it takes up "
-			+ Tons(weaponNeeded) + " of weapon space, and this ship has "
-			+ Tons(weaponSpace) + " free."));
+		GetUI()->Push(new Dialog(Format::StringF({T("Only part of your ship's outfit capacity is usable for weapons. "
+			"You cannot install this outfit, because it takes up %1% of weapon space, and this ship has %2% free."),
+			Tons(weaponNeeded), Tons(weaponSpace)})));
 		return;
 	}
 	
@@ -425,21 +425,20 @@ void OutfitterPanel::FailBuy() const
 	double engineSpace = playerShip->Attributes().Get("engine capacity");
 	if(engineNeeded > engineSpace)
 	{
-		GetUI()->Push(new Dialog("Only part of your ship's outfit capacity is usable for engines. "
-			"You cannot install this outfit, because it takes up "
-			+ Tons(engineNeeded) + " of engine space, and this ship has "
-			+ Tons(engineSpace) + " free."));
+		GetUI()->Push(new Dialog(Format::StringF({T("Only part of your ship's outfit capacity is usable for engines. "
+			"You cannot install this outfit, because it takes up %1% of engine space, and this ship has %2% free."),
+			Tons(engineNeeded), Tons(engineSpace)})));
 		return;
 	}
 	
 	if(selectedOutfit->Category() == "Ammunition")
 	{
 		if(!playerShip->OutfitCount(selectedOutfit))
-			GetUI()->Push(new Dialog("This outfit is ammunition for a weapon. "
-				"You cannot install it without first installing the appropriate weapon."));
+			GetUI()->Push(new Dialog(T("This outfit is ammunition for a weapon. "
+				"You cannot install it without first installing the appropriate weapon.")));
 		else
-			GetUI()->Push(new Dialog("You already have the maximum amount of ammunition for this weapon. "
-				"If you want to install more ammunition, you must first install another of these weapons."));
+			GetUI()->Push(new Dialog(T("You already have the maximum amount of ammunition for this weapon. "
+				"If you want to install more ammunition, you must first install another of these weapons.")));
 		return;
 	}
 	
@@ -447,8 +446,8 @@ void OutfitterPanel::FailBuy() const
 	int mountsFree = playerShip->Attributes().Get("turret mounts");
 	if(mountsNeeded && !mountsFree)
 	{
-		GetUI()->Push(new Dialog("This weapon is designed to be installed on a turret mount, "
-			"but your ship does not have any unused turret mounts available."));
+		GetUI()->Push(new Dialog(T("This weapon is designed to be installed on a turret mount, "
+			"but your ship does not have any unused turret mounts available.")));
 		return;
 	}
 	
@@ -456,22 +455,22 @@ void OutfitterPanel::FailBuy() const
 	int gunsFree = playerShip->Attributes().Get("gun ports");
 	if(gunsNeeded && !gunsFree)
 	{
-		GetUI()->Push(new Dialog("This weapon is designed to be installed in a gun port, "
-			"but your ship does not have any unused gun ports available."));
+		GetUI()->Push(new Dialog(T("This weapon is designed to be installed in a gun port, "
+			"but your ship does not have any unused gun ports available.")));
 		return;
 	}
 	
 	if(selectedOutfit->Get("installable") < 0.)
 	{
-		GetUI()->Push(new Dialog("This item is not an outfit that can be installed in a ship."));
+		GetUI()->Push(new Dialog(T("This item is not an outfit that can be installed in a ship.")));
 		return;
 	}
 	
 	if(!playerShip->Attributes().CanAdd(*selectedOutfit, 1))
 	{
-		GetUI()->Push(new Dialog("You cannot install this outfit in your ship, "
+		GetUI()->Push(new Dialog(T("You cannot install this outfit in your ship, "
 			"because it would reduce one of your ship's attributes to a negative amount. "
-			"For example, it may use up more cargo space than you have left."));
+			"For example, it may use up more cargo space than you have left.")));
 		return;
 	}
 }
@@ -556,13 +555,22 @@ void OutfitterPanel::Sell(bool toCargo)
 
 void OutfitterPanel::FailSell(bool toCargo) const
 {
-	const string &verb = toCargo ? "uninstall" : "sell";
 	if(!planet || !selectedOutfit)
 		return;
 	else if(selectedOutfit->Get("map"))
-		GetUI()->Push(new Dialog("You cannot " + verb + " maps. Once you buy one, it is yours permanently."));
-	else if(HasLicense(selectedOutfit->Name()))
-		GetUI()->Push(new Dialog("You cannot " + verb + " licenses. Once you buy one, it is yours permanently."));
+	{
+		if(toCargo)
+			GetUI()->Push(new Dialog(T("You cannot uninstall maps. Once you buy one, it is yours permanently.")));
+		else
+			GetUI()->Push(new Dialog(T("You cannot sell maps. Once you buy one, it is yours permanently.")));
+	}
+	else if(HasLicense(selectedOutfit->Identifier()))
+	{
+		if(toCargo)
+			GetUI()->Push(new Dialog(T("You cannot uninstall licenses. Once you buy one, it is yours permanently.")));
+		else
+			GetUI()->Push(new Dialog(T("You cannot sell licenses. Once you buy one, it is yours permanently.")));
+	}
 	else
 	{
 		bool hasOutfit = !toCargo && player.Cargo().Get(selectedOutfit);
@@ -573,7 +581,12 @@ void OutfitterPanel::FailSell(bool toCargo) const
 				break;
 			}
 		if(!hasOutfit)
-			GetUI()->Push(new Dialog("You do not have any of these outfits to " + verb + "."));
+		{
+			if(toCargo)
+				GetUI()->Push(new Dialog(T("You do not have any of these outfits to uninstall.")));
+			else
+				GetUI()->Push(new Dialog(T("You do not have any of these outfits to sell.")));
+		}
 		else
 		{
 			for(const Ship *ship : playerShips)
@@ -583,20 +596,36 @@ void OutfitterPanel::FailSell(bool toCargo) const
 						for(const auto &sit : ship->Outfits())
 							if(sit.first->Get(it.first) < 0.)
 							{
-								GetUI()->Push(new Dialog("You cannot " + verb + " this outfit, "
-									"because that would cause your ship's \"" + it.first +
-									"\" value to be reduced to less than zero. "
-									"To " + verb + " this outfit, you must " + verb + " the " +
-									sit.first->Name() + " outfit first."));
+								if(toCargo)
+									GetUI()->Push(new Dialog(Format::StringF({T("You cannot uninstall this outfit, "
+										"because that would cause your ship's \"%1%\" value "
+										"to be reduced to less than zero. "
+										"To uninstall this outfit, you must uninstall the %2% outfit first."),
+										it.first, sit.first->Name()})));
+								else
+									GetUI()->Push(new Dialog(Format::StringF({T("You cannot sell this outfit, "
+										"because that would cause your ship's \"%1%\" value "
+										"to be reduced to less than zero. "
+										"To sell this outfit, you must sell the %2% outfit first."),
+										it.first, sit.first->Name()})));
 								return;
 							}
-						GetUI()->Push(new Dialog("You cannot " + verb + " this outfit, "
-							"because that would cause your ship's \"" + it.first +
-							"\" value to be reduced to less than zero."));
+						if(toCargo)
+							GetUI()->Push(new Dialog(Format::StringF({T("You cannot uninstall this outfit, "
+								"because that would cause your ship's \"%1%\" value "
+								"to be reduced to less than zero."), it.first})));
+						else
+							GetUI()->Push(new Dialog(Format::StringF({T("You cannot sell this outfit, "
+								"because that would cause your ship's \"%1%\" value "
+								"to be reduced to less than zero."), it.first})));
 						return;
 					}
-			GetUI()->Push(new Dialog("You cannot " + verb + " this outfit, "
-				"because something else in your ship depends on it."));
+			if(toCargo)
+				GetUI()->Push(new Dialog(T("You cannot uninstall this outfit, "
+					"because something else in your ship depends on it.")));
+			else
+				GetUI()->Push(new Dialog(T("You cannot sell this outfit, "
+					"because something else in your ship depends on it.")));
 		}
 	}
 }
@@ -630,13 +659,13 @@ void OutfitterPanel::DrawKey()
 	Point pos = Screen::BottomLeft() + Point(10., -30.);
 	Point off = Point(10., -.5 * font.Height());
 	SpriteShader::Draw(box[showForSale], pos);
-	font.Draw("Show outfits for sale", pos + off, color[showForSale]);
+	font.Draw(T("Show outfits for sale"), pos + off, color[showForSale]);
 	AddZone(Rectangle(pos + Point(80., 0.), Point(180., 20.)), [this](){ ToggleForSale(); });
 	
 	bool showCargo = !playerShip;
 	pos.Y() += 20.;
 	SpriteShader::Draw(box[showCargo], pos);
-	font.Draw("Show outfits in cargo", pos + off, color[showCargo]);
+	font.Draw(T("Show outfits in cargo"), pos + off, color[showCargo]);
 	AddZone(Rectangle(pos + Point(80., 0.), Point(180., 20.)), [this](){ ToggleCargo(); });
 }
 
@@ -800,10 +829,10 @@ void OutfitterPanel::CheckRefill()
 	}
 	if(!needed.empty() && cost < player.Accounts().Credits())
 	{
-		string message = "Do you want to reload all the ammunition for your ship";
-		message += (count == 1) ? "?" : "s?";
+		string message = T("Do you want to reload all the ammunition for your ");
+		message += nT("ship?", "ships?", count);
 		if(cost)
-			message += " It will cost " + Format::Number(cost) + " credits.";
+			message += Format::StringF({T(" It will cost %1% credits."), Format::Number(cost)});
 		GetUI()->Push(new Dialog(this, &OutfitterPanel::Refill, message));
 	}
 }

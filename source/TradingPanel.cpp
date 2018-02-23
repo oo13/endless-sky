@@ -21,6 +21,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "GameData.h"
 #include "Information.h"
 #include "Interface.h"
+#include "LocaleInfo.h"
 #include "MapDetailPanel.h"
 #include "Messages.h"
 #include "Outfit.h"
@@ -32,14 +33,15 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <string>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
-	const string TRADE_LEVEL[] = {
-		"(very low)",
-		"(low)",
-		"(medium)",
-		"(high)",
-		"(very high)"
+	const T_ TRADE_LEVEL[] = {
+		T_("(very low)"),
+		T_("(low)"),
+		T_("(medium)"),
+		T_("(high)"),
+		T_("(very high)")
 	};
 	
 	const int MIN_X = -310;
@@ -69,14 +71,15 @@ TradingPanel::~TradingPanel()
 {
 	if(profit)
 	{
-		string message = "You sold " + to_string(tonsSold)
-			+ (tonsSold == 1 ? " ton" : " tons") + " of cargo ";
-		
+		string message;
 		if(profit < 0)
-			message += "at a loss of " + Format::Number(-profit) + " credits.";
+			// TRANSLATORS: %1%: number of tons, %2%: ton or tons, %3%: loss
+			message = Format::StringF({T("You sold %1% %2% of cargo at a loss of %3% credits."),
+				to_string(tonsSold), nT("ton", "tons", "TradingPanel sold", tonsSold), Format::Number(-profit)});
 		else
-			message += "for a total profit of " + Format::Number(profit) + " credits.";
-		
+			// TRANSLATORS: %1%: number of tons, %2%: ton or tons, %3%: profit
+			message = Format::StringF({T("You sold %1% %2% of cargo for a total profit of %3% credits."),
+				to_string(tonsSold), nT("ton", "tons", "TradingPanel sold", tonsSold), Format::Number(profit)});
 		Messages::Add(message);
 	}
 }
@@ -104,18 +107,18 @@ void TradingPanel::Draw()
 	int y = FIRST_Y;
 	FillShader::Fill(Point(-60., y + 15.), Point(480., 1.), unselected);
 	
-	font.Draw("Commodity", Point(NAME_X, y), selected);
-	font.Draw("Price", Point(PRICE_X, y), selected);
+	font.Draw(T("Commodity"), Point(NAME_X, y), selected);
+	font.Draw(T("Price"), Point(PRICE_X, y), selected);
 	
 	string mod = "x " + to_string(Modifier());
 	font.Draw(mod, Point(BUY_X, y), unselected);
 	font.Draw(mod, Point(SELL_X, y), unselected);
 	
-	font.Draw("In Hold", Point(HOLD_X, y), selected);
+	font.Draw(T("In Hold"), Point(HOLD_X, y), selected);
 	
 	y += 5;
 	int lastY = y + 20 * COMMODITY_COUNT + 25;
-	font.Draw("free:", Point(SELL_X + 5, lastY), selected);
+	font.Draw(T("free:"), Point(SELL_X + 5, lastY), selected);
 	font.Draw(to_string(player.Cargo().Free()), Point(HOLD_X, lastY), selected);
 	
 	int outfits = player.Cargo().OutfitsSize();
@@ -133,20 +136,22 @@ void TradingPanel::Draw()
 			}
 		sellOutfits = (hasOutfits && !hasHarvested);
 		
-		string str = to_string(outfits + missionCargo);
-		str += (outfits + missionCargo == 1) ? " ton of " : " tons of ";
+		string fmt;
 		if(hasHarvested && missionCargo)
-			str += "mission cargo and other items.";
+			// TRANSLATORS: %1%: number of tons, %2%: ton or tons
+			fmt = T("%1% %2% of mission cargo and other items.");
 		else if(hasOutfits && missionCargo)
-			str += "outfits and mission cargo.";
+			fmt = T("%1% %2% of outfits and mission cargo.");
 		else if(hasOutfits && hasHarvested)
-			str += "outfits and harvested materials.";
+			fmt = T("%1% %2% of outfits and harvested materials.");
 		else if(hasOutfits)
-			str += "outfits.";
+			fmt = T("%1% %2% of outfits.");
 		else if(hasHarvested)
-			str += "harvested materials.";
+			fmt = T("%1% %2% of harvested materials.");
 		else
-			str += "mission cargo.";
+			fmt = T("%1% %2% of mission cargo.");
+		const string str = Format::StringF({fmt, to_string(outfits + missionCargo),
+			nT("ton", "tons", "TradingPanel hold", outfits + missionCargo)});
 		font.Draw(str, Point(NAME_X, lastY), unselected);
 	}
 	
@@ -161,7 +166,7 @@ void TradingPanel::Draw()
 		
 		bool isSelected = (i++ == selectedRow);
 		const Color &color = (isSelected ? selected : unselected);
-		font.Draw(commodity.name, Point(NAME_X, y), color);
+		font.Draw(commodity.displayName, Point(NAME_X, y), color);
 		
 		if(price)
 		{
@@ -171,7 +176,7 @@ void TradingPanel::Draw()
 			int basis = player.GetBasis(commodity.name);
 			if(basis && basis != price && hold)
 			{
-				string profit = "(profit: " + to_string(price - basis) + ")";
+				string profit = Format::StringF({T("(profit: %1%)"), to_string(price - basis)});
 				font.Draw(profit, Point(LEVEL_X, y), color);
 			}
 			else
@@ -186,13 +191,13 @@ void TradingPanel::Draw()
 				font.Draw(TRADE_LEVEL[level], Point(LEVEL_X, y), color);
 			}
 		
-			font.Draw("[buy]", Point(BUY_X, y), color);
-			font.Draw("[sell]", Point(SELL_X, y), color);
+			font.Draw(T("[buy]"), Point(BUY_X, y), color);
+			font.Draw(T("[sell]"), Point(SELL_X, y), color);
 		}
 		else
 		{
-			font.Draw("----", Point(PRICE_X, y), color);
-			font.Draw("(not for sale)", Point(LEVEL_X, y), color);
+			font.Draw(T("----", "TradingPanel"), Point(PRICE_X, y), color);
+			font.Draw(T("(not for sale)"), Point(LEVEL_X, y), color);
 		}
 		
 		if(hold)

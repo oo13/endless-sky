@@ -23,6 +23,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Information.h"
 #include "Interface.h"
 #include "LineShader.h"
+#include "LocaleInfo.h"
 #include "MapDetailPanel.h"
 #include "MapOutfitterPanel.h"
 #include "MapShipyardPanel.h"
@@ -50,6 +51,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <limits>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	// Log how many player ships are in a given system, regardless if they are parked or carried.
@@ -131,8 +133,8 @@ void MapPanel::Draw()
 	
 	if(!distance.HasRoute(selectedSystem))
 	{
-		static const string UNAVAILABLE = "You have no available route to this system.";
-		static const string UNKNOWN = "You have not yet mapped a route to this system.";
+		static const T_ UNAVAILABLE = T_("You have no available route to this system.");
+		static const T_ UNKNOWN = T_("You have not yet mapped a route to this system.");
 		const Font &font = FontSet::Get(18);
 		
 		const string &message = player.HasVisited(selectedSystem) ? UNAVAILABLE : UNKNOWN;
@@ -179,11 +181,11 @@ void MapPanel::DrawMiniMap(const PlayerInfo &player, double alpha, const System 
 	const Ship *flagship = player.Flagship();
 	for(int i = 0; i < 2; ++i)
 	{
-		static const string UNKNOWN_SYSTEM = "Unexplored System";
+		static const T_ UNKNOWN_SYSTEM = T_("Unexplored System", "MapPanel");
 		const System *system = jump[i];
 		const Government *gov = system->GetGovernment();
 		Point from = system->Position() - center + drawPos;
-		const string &name = player.KnowsName(system) ? system->Name() : UNKNOWN_SYSTEM;
+		const string &name = player.KnowsName(system) ? system->Name() : UNKNOWN_SYSTEM.Str();
 		font.Draw(name, from + Point(OUTER, -.5 * font.Height()), lineColor);
 		
 		// Draw the origin and destination systems, since they
@@ -306,7 +308,7 @@ bool MapPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command)
 	else if(key == 'f')
 	{
 		GetUI()->Push(new Dialog(
-			this, &MapPanel::Find, "Search for:"));
+			this, &MapPanel::Find, T("Search for:", "MapPanel")));
 		return true;
 	}
 	else if(key == '+' || key == '=')
@@ -786,7 +788,7 @@ void MapPanel::DrawSystems()
 		const System &system = it.second;
 		// Referring to a non-existent system in a mission can create a spurious
 		// system record. Ignore those.
-		if(system.Name().empty())
+		if(system.Identifier().empty())
 			continue;
 		if(!player.HasSeen(&system) && &system != specialSystem)
 			continue;
@@ -912,7 +914,7 @@ void MapPanel::DrawNames()
 	for(const auto &it : GameData::Systems())
 	{
 		const System &system = it.second;
-		if(!player.KnowsName(&system) || system.Name().empty())
+		if(!player.KnowsName(&system) || system.Identifier().empty())
 			continue;
 		
 		font.Draw(system.Name(), Zoom() * (system.Position() + center) + offset,

@@ -22,6 +22,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Format.h"
 #include "GameData.h"
 #include "Government.h"
+#include "LocaleInfo.h"
 #include "MapDetailPanel.h"
 #include "PlayerInfo.h"
 #include "Point.h"
@@ -37,6 +38,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <iterator>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	// Width of the conversation text.
@@ -113,7 +115,7 @@ void ConversationPanel::Draw()
 	if(node < 0)
 	{
 		// The conversation has already ended. Draw a "done" button.
-		static const string done = "[done]";
+		static const T_ done = T_("[done]");
 		int width = font.Width(done);
 		int height = font.Height();
 		Point off(Screen::Left() + MARGIN + WIDTH - width, point.Y());
@@ -143,14 +145,14 @@ void ConversationPanel::Draw()
 			FillShader::Fill(center, Point(1., 16.), dim);
 		}
 		
-		font.Draw("First name:", point + Point(40, 0), dim);
+		font.Draw(T("First name:"), point + Point(40, 0), dim);
 		font.Draw(firstName, point + Point(120, 0), choice ? grey : bright);
 		
-		font.Draw("Last name:", point + Point(270, 0), dim);
+		font.Draw(T("Last name:"), point + Point(270, 0), dim);
 		font.Draw(lastName, point + Point(350, 0), choice ? bright : grey);
 		
 		// Draw the OK button, and remember its location.
-		static const string ok = "[ok]";
+		static const T_ ok = T_("[ok]");
 		int width = font.Width(ok);
 		int height = font.Height();
 		Point off(Screen::Left() + MARGIN + WIDTH - width, point.Y());
@@ -228,7 +230,7 @@ bool ConversationPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &comm
 		else if((key == SDLK_RETURN || key == SDLK_KP_ENTER) && !firstName.empty() && !lastName.empty())
 		{
 			// Display the name the player entered.
-			string name = "\t\tName: " + firstName + " " + lastName + ".\n";
+			string name = Format::StringF({T("\t\tName: %1% %2%.\n"), firstName, lastName});
 			text.emplace_back(name);
 			
 			player.SetName(firstName, lastName);

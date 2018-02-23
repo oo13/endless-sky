@@ -23,6 +23,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "GameData.h"
 #include "Government.h"
 #include "Hardpoint.h"
+#include "LocaleInfo.h"
 #include "Messages.h"
 #include "Mission.h"
 #include "Outfit.h"
@@ -42,9 +43,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <algorithm>
 #include <cmath>
 #include <ctime>
-#include <sstream>
 
 using namespace std;
+using namespace Gettext;
 
 
 
@@ -116,6 +117,8 @@ void PlayerInfo::Load(const string &path)
 {
 	// Make sure any previously loaded data is cleared.
 	Clear();
+	// Avoid translations over again.
+	LocaleInfo::StopTranslatingData();
 	
 	filePath = path;
 	DataFile file(path);
@@ -270,6 +273,8 @@ void PlayerInfo::Load(const string &path)
 			}
 		}
 	}
+	LocaleInfo::RestartTranslatingData();
+	
 	// Based on the ships that were loaded, calculate the player's capacity for
 	// cargo and passengers.
 	UpdateCargoCapacities();
@@ -501,7 +506,8 @@ void PlayerInfo::IncrementDate()
 	// Check if any missions have failed because of deadlines.
 	for(Mission &mission : missions)
 		if(mission.CheckDeadline(date) && mission.IsVisible())
-			Messages::Add("You failed to meet the deadline for the mission \"" + mission.Name() + "\".");
+			Messages::Add(Format::StringF({T("You failed to meet the deadline for the mission \"%1%\"."),
+				mission.Name()}));
 	
 	// Check what salaries and tribute the player receives.
 	int total[2] = {0, 0};
@@ -514,14 +520,14 @@ void PlayerInfo::IncrementDate()
 	}
 	if(total[0] || total[1])
 	{
-		string message = "You receive ";
+		string message = T("You receive ");
 		if(total[0])
-			message += Format::Number(total[0]) + " credits salary";
+			message += Format::Number(total[0]) + T(" credits salary");
 		if(total[0] && total[1])
-			message += " and ";
+			message += T(" and ", "salary and tribute");
 		if(total[1])
-			message += Format::Number(total[1]) + " credits in tribute";
-		message += ".";
+			message += Format::Number(total[1]) + T(" credits in tribute");
+		message += T(".", "salary and tribute");
 		Messages::Add(message);
 		accounts.AddCredits(total[0] + total[1]);
 	}
@@ -1015,9 +1021,8 @@ void PlayerInfo::Land(UI *ui)
 		if(added > 0)
 		{
 			flagship->AddCrew(added);
-			Messages::Add("You hire " + to_string(added) + (added == 1
-					? " extra crew member to fill your now-empty bunk."
-					: " extra crew members to fill your now-empty bunks."));
+			Messages::Add(Format::StringF({nT("You hire %1% extra crew member to fill your now-empty bunk.",
+				"You hire %1% extra crew members to fill your now-empty bunks.", added), to_string(added)}));
 		}
 	}
 	
@@ -1117,7 +1122,8 @@ bool PlayerInfo::TakeOff(UI *ui)
 		if(extra)
 		{
 			flagship->AddCrew(-extra);
-			Messages::Add("You fired " + to_string(extra) + " crew members to free up bunks for passengers.");
+			Messages::Add(Format::StringF({T("You fired %1% crew members to free up bunks for passengers."),
+				to_string(extra)}));
 			flagship->Cargo().SetBunks(flagship->Attributes().Get("bunks") - flagship->Crew());
 			cargo.TransferAll(flagship->Cargo());
 		}
@@ -1127,7 +1133,8 @@ bool PlayerInfo::TakeOff(UI *ui)
 	if(extra > 0)
 	{
 		flagship->AddCrew(-extra);
-		Messages::Add("You fired " + to_string(extra) + " crew members because you have no bunks for them.");
+		Messages::Add(Format::StringF({T("You fired %1% crew members because you have no bunks for them."),
+			to_string(extra)}));
 		flagship->Cargo().SetBunks(flagship->Attributes().Get("bunks") - flagship->Crew());
 	}
 	
@@ -1174,20 +1181,18 @@ bool PlayerInfo::TakeOff(UI *ui)
 	{
 		// If your fleet contains more fighters or drones than you can carry,
 		// some of them must be sold.
-		ostringstream out;
-		out << "Because none of your ships can carry them, you sold ";
+		string things;
 		if(shipsSold[1])
-			out << shipsSold[1]
-				<< (shipsSold[1] == 1 ? " fighter" : " fighters");
+			things = Format::StringF({nT("1 fighter", "%1% fighters", shipsSold[1]), to_string(shipsSold[1])});
 		if(shipsSold[0] && shipsSold[1])
-			out << " and ";
+			things += T(" and ", "fighter and drone");
 		if(shipsSold[0])
-			out << shipsSold[0]
-				<< (shipsSold[0] == 1 ? " drone" : " drones");
+			things += Format::StringF({nT("1 drone", "%1% drones", shipsSold[0]), to_string(shipsSold[0])});
 		
-		out << ", earning " << Format::Number(income) << " credits.";
+		const string message = Format::StringF({T("Because none of your ships can carry them, you sold %1%, "
+			"earning %2% credits."), things, Format::Number(income)});
 		accounts.AddCredits(income);
-		Messages::Add(out.str());
+		Messages::Add(message);
 	}
 	
 	// By now, all cargo should have been divvied up among your ships. So, any
@@ -1198,16 +1203,16 @@ bool PlayerInfo::TakeOff(UI *ui)
 		if(it.second)
 		{
 			if(it.first->IsVisible())
-				Messages::Add("Mission \"" + it.first->Name()
-					+ "\" failed because you do not have space for the cargo.");
+				Messages::Add(Format::StringF({T("Mission \"%1%\" failed because "
+					"you do not have space for the cargo."), it.first->Name()}));
 			missionsToRemove.push_back(it.first);
 		}
 	for(const auto &it : cargo.PassengerList())
 		if(it.second)
 		{
 			if(it.first->IsVisible())
-				Messages::Add("Mission \"" + it.first->Name()
-					+ "\" failed because you do not have enough passenger bunks free.");
+				Messages::Add(Format::StringF({T("Mission \"%1%\" failed because "
+					"you do not have enough passenger bunks free."), it.first->Name()}));
 			missionsToRemove.push_back(it.first);
 			
 		}
@@ -1258,13 +1263,13 @@ bool PlayerInfo::TakeOff(UI *ui)
 	if(sold)
 	{
 		// Report how much excess cargo was sold, and what profit you earned.
-		ostringstream out;
-		out << "You sold " << sold << " tons of excess cargo for " << Format::Number(income) << " credits";
+		string message = Format::StringF({T("You sold %1% tons of excess cargo for %2% credits"),
+			to_string(sold), Format::Number(income)});
 		if(totalBasis && totalBasis != income)
-			out << " (for a profit of " << (income - totalBasis) << " credits).";
+			message += Format::StringF({T(" (for a profit of %1% credits)."), to_string(income - totalBasis)});
 		else
-			out << ".";
-		Messages::Add(out.str());
+			message += T(".", "excess");
+		Messages::Add(message);
 	}
 	
 	return true;
@@ -1703,7 +1708,7 @@ void PlayerInfo::Visit(const System *system)
 // Mark the given planet as visited.
 void PlayerInfo::Visit(const Planet *planet)
 {
-	if(planet && !planet->TrueName().empty())
+	if(planet && !planet->Identifier().empty())
 		visitedPlanets.insert(planet);
 }
 
@@ -2105,7 +2110,7 @@ void PlayerInfo::ApplyChanges()
 	// them to the starting system to avoid crashing.
 	if(planet && !system)
 		system = planet->GetSystem();
-	if(!planet || planet->Name().empty() || !system || system->Name().empty())
+	if(!planet || planet->Identifier().empty() || !system || system->Identifier().empty())
 	{
 		system = GameData::Start().GetSystem();
 		planet = GameData::Start().GetPlanet();
@@ -2116,7 +2121,7 @@ void PlayerInfo::ApplyChanges()
 	// specified its location, but this is to avoid null locations.)
 	for(shared_ptr<Ship> &ship : ships)
 	{
-		if(!ship->GetSystem() || ship->GetSystem()->Name().empty())
+		if(!ship->GetSystem() || ship->GetSystem()->Identifier().empty())
 			ship->SetSystem(system);
 		if(ship->GetSystem() == system)
 			ship->SetPlanet(planet);
@@ -2353,9 +2358,9 @@ void PlayerInfo::Save(const string &path) const
 	out.Write("pilot", firstName, lastName);
 	out.Write("date", date.Day(), date.Month(), date.Year());
 	if(system)
-		out.Write("system", system->Name());
+		out.Write("system", system->Identifier());
 	if(planet)
-		out.Write("planet", planet->Name());
+		out.Write("planet", planet->Identifier());
 	if(planet && planet->CanUseServices())
 		out.Write("clearance");
 	// This flag is set if the player must leave the planet immediately upon
@@ -2363,9 +2368,9 @@ void PlayerInfo::Save(const string &path) const
 	if(shouldLaunch)
 		out.Write("launching");
 	for(const System *system : travelPlan)
-		out.Write("travel", system->Name());
+		out.Write("travel", system->Identifier());
 	if(travelDestination)
-		out.Write("travel destination", travelDestination->TrueName());
+		out.Write("travel destination", travelDestination->Identifier());
 	
 	// Save the current setting for the map coloring;
 	out.Write("map coloring", mapColoring);
@@ -2431,7 +2436,7 @@ void PlayerInfo::Save(const string &path) const
 		{
 			for(const auto &it : stock)
 				if(it.second)
-					out.Write(it.first->Name(), it.second);
+					out.Write(it.first->Identifier(), it.second);
 		}
 		out.EndChild();
 	}
@@ -2496,13 +2501,13 @@ void PlayerInfo::Save(const string &path) const
 	
 	// Save a list of systems the player has visited.
 	for(const System *system : visitedSystems)
-		if(!system->Name().empty())
-			out.Write("visited", system->Name());
+		if(!system->Identifier().empty())
+			out.Write("visited", system->Identifier());
 	
 	// Save a list of planets the player has visited.
 	for(const Planet *planet : visitedPlanets)
-		if(!planet->TrueName().empty())
-			out.Write("visited planet", planet->TrueName());
+		if(!planet->Identifier().empty())
+			out.Write("visited planet", planet->Identifier());
 	
 	if(!harvested.empty())
 	{
@@ -2511,7 +2516,7 @@ void PlayerInfo::Save(const string &path) const
 		{
 			for(const auto &it : harvested)
 				if(it.first && it.second)
-					out.Write(it.first->Name(), it.second->Name());
+					out.Write(it.first->Identifier(), it.second->Identifier());
 		}
 		out.EndChild();
 	}
@@ -2573,12 +2578,13 @@ void PlayerInfo::Fine(UI *ui)
 				ui->Push(new ConversationPanel(*this, *conversation));
 			else
 			{
-				message = "Before you can leave your ship, the " + gov->GetName()
-					+ " authorities show up and begin scanning it. They say, \"Captain "
-					+ LastName()
-					+ ", we detect highly illegal material on your ship.\""
+				// TRANSLATORS: %1%: government, %2%: last name
+				message = Format::StringF({T("Before you can leave your ship, the %1%"
+					" authorities show up and begin scanning it. They say, \"Captain %2%"
+					", we detect highly illegal material on your ship.\""
 					"\n\tYou are sentenced to lifetime imprisonment on a penal colony."
-					" Your days of traveling the stars have come to an end.";
+					" Your days of traveling the stars have come to an end."),
+					gov->GetName(), LastName()});
 				ui->Push(new Dialog(message));
 			}
 			// All ships belonging to the player should be removed.

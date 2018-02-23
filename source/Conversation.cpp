@@ -15,6 +15,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DataNode.h"
 #include "DataWriter.h"
 #include "Format.h"
+#include "LocaleInfo.h"
 #include "Sprite.h"
 #include "SpriteSet.h"
 
@@ -84,11 +85,18 @@ bool Conversation::RequiresLaunch(int outcome)
 
 
 // Load a conversation from file.
-void Conversation::Load(const DataNode &node)
+void Conversation::Load(const DataNode &node, const string &ctx)
 {
 	// Make sure this really is a conversation specification.
 	if(node.Token(0) != "conversation")
 		return;
+	
+	// Top leve conversation called with empty context, so it's made here.
+	string context;
+	if(ctx.empty() && node.Size() >= 2)
+		context = "conversation: " + node.Token(1);
+	else
+		context = ctx;
 	
 	// Free any previously loaded data.
 	nodes.clear();
@@ -116,7 +124,7 @@ void Conversation::Load(const DataNode &node)
 			{
 				// Store the text of this choice. By default, the choice will
 				// just bring you to the next node in the script.
-				nodes.back().data.emplace_back(grand.Token(0), nodes.size());
+				nodes.back().data.emplace_back(LocaleInfo::TranslateData(grand.Token(0), context), nodes.size());
 				nodes.back().data.back().first += '\n';
 				
 				LoadGotos(grand);
@@ -171,7 +179,7 @@ void Conversation::Load(const DataNode &node)
 				AddNode();
 			
 			// Always append a newline to the end of the text.
-			nodes.back().data.back().first += child.Token(0);
+			nodes.back().data.back().first += LocaleInfo::TranslateData(child.Token(0), context);
 			nodes.back().data.back().first += '\n';
 			
 			// Check whether there is a goto attached to this block of text. If

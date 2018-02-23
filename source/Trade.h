@@ -29,6 +29,7 @@ public:
 	class Commodity {
 	public:
 		std::string name;
+		std::string displayName;
 		int low = 0;
 		int high = 0;
 		std::vector<std::string> items;
@@ -40,7 +41,6 @@ public:
 	
 	const std::vector<Commodity> &Commodities() const;
 	const std::vector<Commodity> &SpecialCommodities() const;
-	
 	
 private:
 	std::vector<Commodity> commodities;
