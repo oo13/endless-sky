@@ -76,8 +76,10 @@
 		<Unit filename="tests/src/test_random.cpp" />
 		<Unit filename="tests/src/test_set.cpp" />
 		<Unit filename="tests/src/text/test_FontUtilities.cpp" />
+		<Unit filename="tests/src/text/test_Gettext.cpp" />
 		<Unit filename="tests/src/text/test_alignment.cpp" />
 		<Unit filename="tests/src/text/test_displaytext.cpp" />
+		<Unit filename="tests/src/text/test_format.cpp" />
 		<Unit filename="tests/src/text/test_layout.cpp" />
 		<Unit filename="tests/src/text/test_truncate.cpp" />
 		<Extensions>

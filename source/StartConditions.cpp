@@ -26,6 +26,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <sstream>
 
 using namespace std;
+using namespace Gettext;
 
 
 
@@ -97,7 +98,8 @@ void StartConditions::Load(const DataNode &node)
 				description.clear();
 				clearDescription = false;
 			}
-			description += value + "\n";
+			description.push_back(T_(value));
+			description.push_back(T_("\n", "paragraph separator of start condition"));
 		}
 		else if(key == "thumbnail" && hasValue)
 			thumbnail = SpriteSet::Get(value);
@@ -124,9 +126,9 @@ void StartConditions::Load(const DataNode &node)
 			conditions.Add(child);
 	}
 	if(description.empty())
-		description = "(No description provided.)";
+		description.push_back(T_("(No description provided.)"));
 	if(name.empty())
-		name = "(Unnamed start)";
+		name = G("(Unnamed start)", "start");
 	
 	// If no identifier is supplied, the creator would like this starting scenario to be isolated from
 	// other plugins. Thus, use an unguessable, non-reproducible identifier, this item's memory address.
@@ -206,14 +208,14 @@ const Sprite *StartConditions::GetThumbnail() const noexcept
 
 
 
-const std::string &StartConditions::GetDisplayName() const noexcept
+string StartConditions::GetDisplayName() const noexcept
 {
-	return name;
+	return T(name, "start");
 }
 
 
 
-const std::string &StartConditions::GetDescription() const noexcept
+string StartConditions::GetDescription() const noexcept
 {
-	return description;
+	return Concat(description);
 }

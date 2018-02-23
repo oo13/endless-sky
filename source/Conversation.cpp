@@ -15,10 +15,14 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DataNode.h"
 #include "DataWriter.h"
 #include "text/Format.h"
+#include "text/Gettext.h"
 #include "Sprite.h"
 #include "SpriteSet.h"
 
+#include <utility>
+
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	// Lookup table for matching special tokens to enumeration values.
@@ -63,6 +67,21 @@ namespace {
 		}
 		out.EndChild();
 	}
+	
+	// List of all instances need to translate.
+	list<Conversation*> &GetListOfConversations()
+	{
+		static list<Conversation*> *listOfConversations(new list<Conversation*>);
+		return *listOfConversations;
+	}
+	
+	// The Hook of translation.
+	function<void()> updateCatalog([](){
+		for(auto it : GetListOfConversations())
+			it->ParseNodes();
+	});
+	// Set the hook.
+	volatile bool hooked = AddHookUpdating(&updateCatalog);
 }
 
 // The possible outcomes of a conversation:
@@ -85,9 +104,98 @@ bool Conversation::RequiresLaunch(int outcome)
 
 
 
-// Load a conversation from file.
-void Conversation::Load(const DataNode &node)
+Conversation::Conversation()
+	: labels(), unresolved(), nodes(), originalNode(), context()
 {
+	RegisterToConversationsList();
+}
+
+
+
+Conversation::Conversation(const Conversation& a)
+	: labels(a.labels), unresolved(a.unresolved), nodes(a.nodes), originalNode(a.originalNode), context(a.context)
+{
+	RegisterToConversationsList();
+}
+
+
+
+Conversation::Conversation(Conversation&& a) noexcept
+	: labels(std::move(a.labels)), unresolved(std::move(a.unresolved)), nodes(std::move(a.nodes)),
+	originalNode(std::move(a.originalNode)), context(std::move(a.context))
+{
+	iterToThis = std::move(a.iterToThis);
+	auto end = GetListOfConversations().end();
+	if(iterToThis != end)
+		*iterToThis = this;
+	a.iterToThis = end;
+}
+
+
+
+Conversation::~Conversation() noexcept
+{
+	UnregisterFromConversationsList();
+}
+
+
+
+Conversation &Conversation::operator=(const Conversation &a)
+{
+	if(this != &a)
+	{
+		labels = a.labels;
+		unresolved = a.unresolved;
+		nodes = a.nodes;
+		originalNode = a.originalNode;
+		context = a.context;
+	}
+	return *this;
+}
+
+
+
+Conversation &Conversation::operator=(Conversation &&a) noexcept
+{
+	labels = std::move(a.labels);
+	unresolved = std::move(a.unresolved);
+	nodes = std::move(a.nodes);
+	originalNode = std::move(a.originalNode);
+	context = std::move(a.context);
+	a.UnregisterFromConversationsList();
+	return *this;
+}
+
+
+
+// Load a conversation from file.
+void Conversation::Load(const DataNode &node, const string &ctx)
+{
+	// Make sure this really is a conversation specification.
+	if(node.Token(0) != "conversation")
+		return;
+	
+	// Top level conversation called with empty context, so it's made here.
+	if(ctx.empty() && node.Size() >= 2)
+		context = "conversation: " + node.Token(1);
+	else
+		context = ctx;
+	
+	originalNode = node;
+	ParseNodes();
+	if(!IsTranslating())
+		originalNode = DataNode();
+}
+
+
+
+void Conversation::ParseNodes()
+{
+	const DataNode &node = originalNode;
+	// Do not change nodes if originalNode is empty.
+	if(node.Size() == 0)
+		return;
+	
 	// Make sure this really is a conversation specification.
 	if(node.Token(0) != "conversation")
 		return;
@@ -127,7 +235,7 @@ void Conversation::Load(const DataNode &node)
 				
 				// Store the text of this choice. By default, the choice will
 				// just bring you to the next node in the script.
-				nodes.back().data.emplace_back(grand.Token(0), nodes.size());
+				nodes.back().data.emplace_back(T(grand.Token(0), context), nodes.size());
 				nodes.back().data.back().first += '\n';
 				
 				LoadGotos(grand);
@@ -186,7 +294,7 @@ void Conversation::Load(const DataNode &node)
 				AddNode();
 			
 			// Always append a newline to the end of the text.
-			nodes.back().data.back().first += child.Token(0);
+			nodes.back().data.back().first += T(child.Token(0), context);
 			nodes.back().data.back().first += '\n';
 			
 			// Check whether there is a goto attached to this block of text. If
@@ -308,6 +416,8 @@ Conversation Conversation::Substitute(const map<string, string> &subs) const
 	for(Node &node : result.nodes)
 		for(pair<string, int> &choice : node.data)
 			choice.first = Format::Replace(choice.first, subs);
+	// Avoid to translate this result.
+	result.originalNode = DataNode();
 	return result;
 }
 
@@ -484,4 +594,25 @@ void Conversation::AddNode()
 {
 	nodes.emplace_back();
 	nodes.back().data.emplace_back("", nodes.size());
+}
+
+
+
+void Conversation::RegisterToConversationsList()
+{
+	auto &list = GetListOfConversations();
+	list.push_front(this);
+	iterToThis = list.begin();
+}
+
+
+
+void Conversation::UnregisterFromConversationsList() noexcept
+{
+	auto &list = GetListOfConversations();
+	if(iterToThis != list.end())
+	{
+		list.erase(iterToThis);
+		iterToThis = list.end();
+	}
 }

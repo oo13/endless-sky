@@ -13,18 +13,27 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #ifndef PHRASE_H_
 #define PHRASE_H_
 
+#include "DataNode.h"
+
 #include <functional>
+#include <list>
 #include <string>
 #include <utility>
 #include <vector>
-
-class DataNode;
 
 
 
 // Class representing a set of rules for generating text strings from words.
 class Phrase {
 public:
+	Phrase();
+	Phrase(const Phrase &a);
+	Phrase(Phrase &&a) noexcept;
+	~Phrase() noexcept;
+	
+	Phrase &operator=(const Phrase &a);
+	Phrase &operator=(Phrase &&a) noexcept;
+	
 	// Parse the given node into a new branch associated with this phrase.
 	void Load(const DataNode &node);
 	
@@ -33,9 +42,17 @@ public:
 	const std::string &Name() const;
 	std::string Get() const;
 	
+	// Translate all nodes into the current language.
+	void UpdateTranslation();
+	
 	
 private:
 	bool ReferencesPhrase(const Phrase *phrase) const;
+	void ParseNode(const DataNode &node);
+	
+	
+	void RegisterToPhrasesList();
+	void UnregisterFromPhrasesList() noexcept;
 	
 	
 private:
@@ -78,10 +95,21 @@ private:
 	};
 	
 	
+	// The Original nodes will be translated when calling UpdateTranslation().
+	// Don't translate the nodes loaded when Gettext::IsTranslating() returns false.
+	struct OriginalNodes {
+		std::vector<DataNode> translatable;
+		std::vector<DataNode> dontTranslate;
+	};
+	
+	
 private:
 	std::string name;
 	// Each time this phrase is defined, a new sentence is created.
 	std::vector<Sentence> sentences;
+	
+	OriginalNodes originalNodes;
+	std::list<Phrase*>::iterator iterToThis;
 };
 
 

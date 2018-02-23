@@ -14,13 +14,14 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #define CONVERSATION_H_
 
 #include "ConditionSet.h"
+#include "DataNode.h"
 
+#include <list>
 #include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
-class DataNode;
 class DataWriter;
 class Sprite;
 
@@ -53,8 +54,16 @@ public:
 	static bool RequiresLaunch(int outcome);
 	
 public:
+	Conversation();
+	Conversation(const Conversation& a);
+	Conversation(Conversation&& a) noexcept;
+	~Conversation() noexcept;
+	
+	Conversation &operator=(const Conversation& a);
+	Conversation &operator=(Conversation&& a) noexcept;
+	
 	// Read or write to files.
-	void Load(const DataNode &node);
+	void Load(const DataNode &node, const std::string &context = "");
 	void Save(DataWriter &out) const;
 	// Check if any data is loaded in this conversation object.
 	bool IsEmpty() const noexcept;
@@ -77,6 +86,8 @@ public:
 	const Sprite *Scene(int node) const;
 	int NextNode(int node, int choice = 0) const;
 	
+	// Parse all nodes.
+	void ParseNodes();
 	
 private:
 	// The conversation is a network of "nodes" that you travel between by
@@ -119,6 +130,10 @@ private:
 	void AddNode();
 	
 	
+	void RegisterToConversationsList();
+	void UnregisterFromConversationsList() noexcept;
+	
+	
 private:
 	// While parsing the conversation, keep track of what labels link to what
 	// nodes. If a name appears in a goto before that label appears, remember
@@ -127,6 +142,13 @@ private:
 	std::multimap<std::string, std::pair<int, int>> unresolved;
 	// The actual conversation data:
 	std::vector<Node> nodes;
+	
+	// Original data node.
+	DataNode originalNode;
+	// Context.
+	std::string context;
+	// Iterator to this in the list of all instances.
+	std::list<Conversation*>::iterator iterToThis;
 };
 
 
