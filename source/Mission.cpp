@@ -139,9 +139,7 @@ void Mission::Load(const DataNode &node)
 		}
 		else if(child.Token(0) == "cargo" && child.Size() >= 3)
 		{
-			// This context is not optional. Translators should not modify any
-			// kind of commodity, such as 'Food.'
-			cargo = LocaleInfo::TranslateData(child.Token(1), "cargo");
+			cargo = child.Token(1);
 			cargoSize = child.Value(2);
 			if(child.Size() >= 4)
 				cargoLimit = child.Value(3);
@@ -962,7 +960,7 @@ Mission Mission::Instantiate(const PlayerInfo &player) const
 		if(commodity)
 			result.cargo = commodity->items[Random::Int(commodity->items.size())];
 		else
-			result.cargo = cargo;
+			result.cargo = LocaleInfo::TranslateData(cargo, "cargo");
 	}
 	// Pick a random cargo amount, if requested.
 	if(cargoSize || cargoLimit)

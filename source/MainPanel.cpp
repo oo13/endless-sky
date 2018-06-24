@@ -307,7 +307,7 @@ void MainPanel::ShowScanDialog(const ShipEvent &event)
 
 				// TRANSLATORS: %1%: number, %2%: commodity
 				out << Format::StringF({nT("\t%1% ton of %2%\n", "\t%1% tons of %2%\n", "cargo", it.second),
-					to_string(it.second), it.first});
+					to_string(it.second), GameData::DisplayNameOfCommodity(it.first)});
 			}
 		for(const auto &it : target->Cargo().Outfits())
 			if(it.second)
