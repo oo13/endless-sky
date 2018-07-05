@@ -49,7 +49,7 @@ HailPanel::HailPanel(PlayerInfo &player, const shared_ptr<Ship> &ship)
 	const Font &font = FontSet::Get(14);
 	if(!ship->Name().empty())
 		// TRANSLATORS: %1%: government, %2%: ship's noun, %3%: ship name
-		header = font.Truncate(Format::StringF({T("%1% %2% \"%3", "HailPanel ship"),
+		header = font.Truncate(Format::StringF({T("%1% %2% \"%3%", "HailPanel ship"),
 			gov->GetName(), ship->Noun(), ship->Name()}), 328) + T("\": ");
 	else
 		// TRANSLATORS: %1%: ship model, %2%: government
