@@ -593,6 +593,7 @@ void OutfitterPanel::FailSell(bool toCargo) const
 				for(const pair<const char *, double> &it : selectedOutfit->Attributes())
 					if(ship->Attributes().Get(it.first) < it.second)
 					{
+						const string attrName = LocaleInfo::TranslateData(it.first, "Attribute");
 						for(const auto &sit : ship->Outfits())
 							if(sit.first->Get(it.first) < 0.)
 							{
@@ -601,23 +602,23 @@ void OutfitterPanel::FailSell(bool toCargo) const
 										"because that would cause your ship's \"%1%\" value "
 										"to be reduced to less than zero. "
 										"To uninstall this outfit, you must uninstall the %2% outfit first."),
-										it.first, sit.first->Name()})));
+										attrName, sit.first->Name()})));
 								else
 									GetUI()->Push(new Dialog(Format::StringF({T("You cannot sell this outfit, "
 										"because that would cause your ship's \"%1%\" value "
 										"to be reduced to less than zero. "
 										"To sell this outfit, you must sell the %2% outfit first."),
-										it.first, sit.first->Name()})));
+										attrName, sit.first->Name()})));
 								return;
 							}
 						if(toCargo)
 							GetUI()->Push(new Dialog(Format::StringF({T("You cannot uninstall this outfit, "
 								"because that would cause your ship's \"%1%\" value "
-								"to be reduced to less than zero."), it.first})));
+								"to be reduced to less than zero."), attrName})));
 						else
 							GetUI()->Push(new Dialog(Format::StringF({T("You cannot sell this outfit, "
 								"because that would cause your ship's \"%1%\" value "
-								"to be reduced to less than zero."), it.first})));
+								"to be reduced to less than zero."), attrName})));
 						return;
 					}
 			if(toCargo)
