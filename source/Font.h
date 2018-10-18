@@ -119,6 +119,7 @@ private:
 private:
 	std::vector<std::shared_ptr<IGlyphs> > sources;
 	int size;
+	int heightOverride;
 };
 
 

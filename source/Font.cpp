@@ -70,7 +70,7 @@ namespace {
 
 
 Font::Font()
-	: size(0)
+	: size(0), heightOverride(0)
 {
 }
 
@@ -88,10 +88,13 @@ bool Font::Load(const DataNode &node)
 		return false;
 	}
 	
-	// Get size.
+	// Get size and height.
 	size = 0;
+	heightOverride = 0;
 	for(const DataNode &child : node)
 	{
+		if(child.Token(0) == "height override")
+			heightOverride = round(child.Value(1));
 		if(child.Token(0) != "size")
 			continue;
 		
@@ -331,7 +334,10 @@ int Font::Height() const
 	if(sources.empty())
 		return 0;
 	
-	return ceil(sources[0]->LineHeight());
+	if(heightOverride > 0)
+		return heightOverride;
+	else
+		return ceil(sources[0]->LineHeight());
 }
 
 
