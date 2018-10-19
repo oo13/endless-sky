@@ -394,7 +394,7 @@ void WrappedText::AdjustLine(size_t lineBegin, int lineWidth, bool isEnd, const 
 	// paragraph is left aligned, not justified.
 	if(alignment == JUSTIFIED && !isEnd && wordCount > 1)
 	{
-		const int totalSpaceWeight = accumulate(spaceWeight.begin(), spaceWeight.end(), 0);
+		const int totalSpaceWeight = accumulate(spaceWeight.begin(), prev(spaceWeight.end()), 0);
 		if(totalSpaceWeight == 0)
 			return;
 		// The hard limit of compression. Too long line including some NO-BREAK SPACEs can be compressed.
