@@ -41,7 +41,7 @@ namespace {
 	// line and to vary the width in it.
 	class MergedCharactersBlock {
 	public:
-		// This block is a interword-space. It's not drawn.
+		// This block is an interword-space. It's not drawn.
 		// The string s contains a single character if isInterwordSpace is true.
 		bool isInterwordSpace;
 		
@@ -60,7 +60,7 @@ namespace {
 		// Line Break Opportunity at the end of this block.
 		LineBreakOpportunity lineBreakOpportunity;
 		
-		// This block is a end of paragraph.
+		// This block is an end of paragraph.
 		bool isParagraphEnd;
 		
 		// The contents of this block.
@@ -429,7 +429,7 @@ int WrappedText::Space(char32_t c) const
 
 
 namespace {
-	// A implementation of Unicode Line Breaking Algorithm. (UAX #14 Revision#41)
+	// An implementation of Unicode Line Breaking Algorithm. (UAX #14 Revision#41)
 	// For more information, see UAX #14: Unicode Line Breaking Algorithm,
 	// at http://www.unicode.org/reports/tr14/.
 	//
@@ -2370,7 +2370,7 @@ namespace {
 		{ needToScanLB30b, scanLB30b },
 	};
 	
-	// The end of a implementation of Unicode Line Breaking Algorithm.
+	// The end of an implementation of Unicode Line Breaking Algorithm.
 	
 	
 	
@@ -2418,7 +2418,7 @@ namespace {
 		// The position in the UTF-8 text.
 		size_t pos;
 		size_t next;
-		// This is a interword-space.
+		// This is an interword-space.
 		bool isInterwordSpace;
 		// This is a space.
 		bool isSpace;
