@@ -578,8 +578,7 @@ FreeTypeGlyphs::RenderedText &FreeTypeGlyphs::Render(const string &str, double x
 		{
 			texture = it->second.texture;
 			it = cache.erase(it);
-			if(texture)
-				break;
+			break;
 		}
 	
 	// Record rendered text.
