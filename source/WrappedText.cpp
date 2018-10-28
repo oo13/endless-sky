@@ -365,10 +365,12 @@ void WrappedText::Wrap()
 				// The next word will be the first on the next line.
 				word.y += lineHeight;
 				word.x = 0;
-				lineWidth = widthOfBlock[nextLineBegin] - additionalWidth[nextLineBegin];
 				if(blocks[nextLineBegin-1].isParagraphEnd)
 					// Here is a paragraph break.
 					word.y += paragraphBreak;
+				if(nextLineBegin >= blocks.size())
+					break;
+				lineWidth = widthOfBlock[nextLineBegin] - additionalWidth[nextLineBegin];
 				n = nextLineBegin - 1;
 				blockBegin = blockEnd = nextLineBegin;
 			}
