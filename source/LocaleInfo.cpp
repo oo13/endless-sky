@@ -205,6 +205,8 @@ string LocaleInfo::TranslateCore(const string &msgid)
 
 string LocaleInfo::TranslateCore(const string &msgid, const string &context)
 {
+	if(msgid.empty())
+		return string();
 	if(context.empty())
 		return TranslateCore(msgid);
 	string id(context + contextSeparator + msgid);
@@ -231,6 +233,8 @@ string LocaleInfo::TranslateCore(const string &msgid, const string &msgid_plural
 string LocaleInfo::TranslateCore(const string &msgid, const string &msgid_plural,
 	const string &context, unsigned long n)
 {
+	if(msgid.empty())
+		return string();
 	if(context.empty())
 		return TranslateCore(msgid, msgid_plural, n);
 	string id1(context + contextSeparator + msgid);
@@ -271,6 +275,8 @@ string LocaleInfo::TranslateData(const string &msgid, const string &context)
 {
 	if(stopTranslatingData)
 		return msgid;
+	if(msgid.empty())
+		return string();
 	if(context.empty())
 		return TranslateData(msgid);
 	string id(context + contextSeparator + msgid);
@@ -314,6 +320,8 @@ string LocaleInfo::TranslateData(const string &msgid, const string &msgid_plural
 {
 	if(stopTranslatingData)
 		return msgid;
+	if(msgid.empty())
+		return string();
 	if(context.empty())
 		return TranslateData(msgid, msgid_plural, n);
 	string id1(context + contextSeparator + msgid);
