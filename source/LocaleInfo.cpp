@@ -307,7 +307,7 @@ string LocaleInfo::TranslateData(const string &msgid, const string &msgid_plural
 		if(t != p1 && t != p2)
 			return string(t);
 	}
-	if(t == p1)
+	if(n == 1)
 		return msgid;
 	else
 		return msgid_plural;
@@ -335,7 +335,7 @@ string LocaleInfo::TranslateData(const string &msgid, const string &msgid_plural
 		if(t != p1 && t != p2)
 			return string(t);
 	}
-	if(t == p1)
+	if(n == 1)
 		return msgid;
 	else
 		return msgid_plural;
