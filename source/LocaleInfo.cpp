@@ -304,7 +304,7 @@ string LocaleInfo::TranslateData(const string &msgid, const string &msgid_plural
 	for(const auto &s : boundDataTextdomains)
 	{
 		t = dngettext(s.c_str(), p1, p2, n);
-		if(t != p1 || t != p2)
+		if(t != p1 && t != p2)
 			return string(t);
 	}
 	if(t == p1)
@@ -332,7 +332,7 @@ string LocaleInfo::TranslateData(const string &msgid, const string &msgid_plural
 	for(const auto &s : boundDataTextdomains)
 	{
 		t = dngettext(s.c_str(), p1, p2, n);
-		if(t != p1 || t != p2)
+		if(t != p1 && t != p2)
 			return string(t);
 	}
 	if(t == p1)
