@@ -94,9 +94,9 @@ namespace {
 	// for a initialization of any static variables.
 	set<std::function<void()>*> &GetCoreHooks()
 	{
-		// Thread safe in C++11.
-		static set<std::function<void()>*> setOfUpdatingCoresHook;
-		return setOfUpdatingCoresHook;
+		// Don't destruct this object because it must be alive until all static variables are destructed.
+		static set<std::function<void()>*> *setOfUpdatingCoresHook(new set<std::function<void()>*>);
+		return *setOfUpdatingCoresHook;
 	}
 	
 	// Bind all message catalogs in localizedBaseDir with textdomain.
