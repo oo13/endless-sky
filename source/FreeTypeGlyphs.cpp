@@ -124,16 +124,14 @@ FreeTypeGlyphs::FreeTypeGlyphs()
 	  underscoreIndex(0), library(nullptr), face(nullptr),
 	  screenWidth(0), screenHeight(0)
 {
+	cache.SetUpdateInterval(3600);
 }
 
 
 
 FreeTypeGlyphs::~FreeTypeGlyphs()
 {
-	for(auto &it : cache)
-		if(it.second.texture)
-			glDeleteTextures(1, &it.second.texture);
-	cache.clear();
+	cache.ForAll([](RenderedText &x){ if(x.texture) glDeleteTextures(1, &x.texture); });
 	
 	if(face)
 		FT_Done_Face(face);
@@ -231,7 +229,7 @@ void FreeTypeGlyphs::Draw(const string &str, double x, double y, const Color &co
 	if(!face)
 		return;
 	
-	RenderedText &text = Render(str, x, y, Font::ShowUnderlines());
+	const RenderedText &text = Render(str, x, y, Font::ShowUnderlines());
 	if(!text.texture)
 		return;
 	
@@ -426,23 +424,21 @@ void FreeTypeGlyphs::Shape(vector<GlyphData> &arr, double x, double y) const
 
 
 // Render the text, caching the result for some time.
-FreeTypeGlyphs::RenderedText &FreeTypeGlyphs::Render(const string &str, double x, double y, bool showUnderlines) const
+const FreeTypeGlyphs::RenderedText &FreeTypeGlyphs::Render(const string &str, double x, double y, bool showUnderlines) const
 {
 	FT_Error error;
 	
 	if(showUnderlines && str.find('_') == string::npos)
 		showUnderlines = false;
 	
-	chrono::steady_clock::time_point timestamp = chrono::steady_clock::now();
 	FT_Vector origin = { To26Dot6(x - floor(x)), To26Dot6(ceil(y) - y) };
 	
 	// Return if already cached.
 	CacheKey key = make_pair(str, origin.x + (origin.y << 6) + (showUnderlines << 12));
-	auto it = cache.find(key);
-	if(it != cache.end())
+	auto cached = cache.Use(key);
+	if(cached.second)
 	{
-		it->second.timestamp = timestamp;
-		return it->second;
+		return *cached.first;
 	}
 	
 	// Shape the text.
@@ -573,26 +569,23 @@ FreeTypeGlyphs::RenderedText &FreeTypeGlyphs::Render(const string &str, double x
 	
 	// Try to reuse an old texture.
 	GLuint texture = 0;
-	for(auto it = cache.begin(); !texture && it != cache.end(); ++it)
-		if(chrono::duration_cast<chrono::minutes>(timestamp - it->second.timestamp).count() >= 1)
-		{
-			texture = it->second.texture;
-			it = cache.erase(it);
-		}
+	auto recycled = cache.Recycle();
+	if(recycled.second)
+		texture = recycled.first.texture;
 	
 	// Record rendered text.
-	RenderedText &text = cache[key];
+	RenderedText &text = recycled.first;
 	text.texture = texture;
 	text.width = buffer.image.Width();
 	text.height = buffer.image.Height();
 	text.center.X() = .5 * buffer.image.Width() + bounds.xMin;
 	text.center.Y() = .5 * buffer.image.Height() - bounds.yMax;
-	text.timestamp = timestamp;
 	
 	// Upload the image as a texture.
 	if(!text.texture)
 		glGenTextures(1, &text.texture);
 	glBindTexture(GL_TEXTURE_2D, text.texture);
+	const auto &cachedText = cache.Set(key, RenderedText(text));
 	
 	// Use linear interpolation and no wrapping.
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -608,7 +601,7 @@ FreeTypeGlyphs::RenderedText &FreeTypeGlyphs::Render(const string &str, double x
 	// Unbind the texture.
 	glBindTexture(GL_TEXTURE_2D, 0);
 	
-	return text;
+	return cachedText;
 }
 
 

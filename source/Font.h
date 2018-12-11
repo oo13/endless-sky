@@ -13,6 +13,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #ifndef FONT_H_
 #define FONT_H_
 
+#include "Cache.h"
+
 #include <memory>
 #include <string>
 #include <utility>
@@ -110,6 +112,17 @@ public:
 		virtual void SetUpShader() = 0;
 	};
 	
+	// A mapped value for drawCache.
+	// A text will draw with source[sourceNumber].
+	struct DrawnData {
+		std::string text;
+		size_t sourceNumber;
+		double width;
+		
+		DrawnData(const std::string &t, size_t s, double w)
+			: text(t), sourceNumber(s), width(w)
+		{}
+	};
 	
 private:
 	// Prepare a string for processing by multiple sources, producing source-end pairs.
@@ -119,6 +132,8 @@ private:
 private:
 	std::vector<std::shared_ptr<IGlyphs> > sources;
 	int size;
+	mutable Cache<std::string, int, true> widthCache;
+	mutable Cache<std::string, std::vector<DrawnData>, true> drawCache;
 };
 
 

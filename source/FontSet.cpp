@@ -14,6 +14,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "Font.h"
 
+#include <utility>
 #include <map>
 
 using namespace std;
@@ -28,7 +29,7 @@ void FontSet::Load(const DataNode &node)
 {
 	Font font;
 	if(font.Load(node))
-		fonts[font.Size()] = font;
+		fonts[font.Size()] = move(font);
 }
 
 
