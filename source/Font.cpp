@@ -195,9 +195,11 @@ void Font::DrawAliased(const string &str, double x, double y, const Color &color
 		return;
 	
 	y += sources[0]->Baseline();
-	string buf = ReplaceCharacters(str);
 	if(sources.size() == 1)
+	{
+		const string buf = ReplaceCharacters(str);
 		sources[0]->Draw(buf, x, y, color);
+	}
 	else
 	{
 		const auto cached = drawCache.Use(str);
@@ -212,6 +214,7 @@ void Font::DrawAliased(const string &str, double x, double y, const Color &color
 		else
 		{
 			vector<DrawnData> cacheData;
+			const string buf = ReplaceCharacters(str);
 			if(sources[0]->FindUnsupported(buf) == buf.length())
 			{
 				sources[0]->Draw(buf, x, y, color);
@@ -243,11 +246,11 @@ int Font::Width(const string &str) const
 	if(sources.empty())
 		return 0;
 	
-	string buf = ReplaceCharacters(str);
-	const auto cached = widthCache.Use(buf);
+	const auto cached = widthCache.Use(str);
 	if(cached.second)
 		return *cached.first;
 	
+	const string buf = ReplaceCharacters(str);
 	int w = 0;
 	if(sources.size() == 1 || sources[0]->FindUnsupported(buf) == buf.length())
 		w = ceil(sources[0]->Width(buf));
@@ -264,7 +267,7 @@ int Font::Width(const string &str) const
 		}
 		w = ceil(width);
 	}
-	widthCache.Set(buf, int(w));
+	widthCache.Set(str, int(w));
 	return w;
 }
 
