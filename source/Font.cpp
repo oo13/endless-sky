@@ -218,7 +218,7 @@ void Font::DrawAliased(const string &str, double x, double y, const Color &color
 			if(sources[0]->FindUnsupported(buf) == buf.length())
 			{
 				sources[0]->Draw(buf, x, y, color);
-				cacheData.emplace_back(buf, 0, 0);
+				cacheData.emplace_back(buf, 0, 0.0);
 			}
 			else
 			{
@@ -228,7 +228,7 @@ void Font::DrawAliased(const string &str, double x, double y, const Color &color
 				{
 					string tmp(buf, pos, section.second - pos);
 					sources[section.first]->Draw(tmp, x, y, color);
-					const size_t w = sources[section.first]->Width(tmp);
+					const double w = sources[section.first]->Width(tmp);
 					x += w;
 					pos = section.second;
 					cacheData.emplace_back(tmp, section.first, w);
