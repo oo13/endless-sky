@@ -39,7 +39,7 @@ public:
 	void Draw(const std::string &str, const Point &point, const Color &color) const;
 	void DrawAliased(const std::string &str, double x, double y, const Color &color) const;
 	
-	int Width(const std::string &str) const;
+	int Width(const std::string &str, double *highPrecisionWidth = nullptr) const;
 	std::string Truncate(const std::string &str, int width, bool ellipsis = true) const;
 	std::string TruncateFront(const std::string &str, int width, bool ellipsis = true) const;
 	std::string TruncateMiddle(const std::string &str, int width, bool ellipsis = true) const;
@@ -132,7 +132,7 @@ private:
 private:
 	std::vector<std::shared_ptr<IGlyphs> > sources;
 	int size;
-	mutable Cache<std::string, int, true> widthCache;
+	mutable Cache<std::string, double, true> widthCache;
 	mutable Cache<std::string, std::vector<DrawnData>, true> drawCache;
 };
 

@@ -241,34 +241,38 @@ void Font::DrawAliased(const string &str, double x, double y, const Color &color
 
 
 
-int Font::Width(const string &str) const
+int Font::Width(const string &str, double *highPrecisionWidth) const
 {
 	if(sources.empty())
 		return 0;
 	
 	const auto cached = widthCache.Use(str);
 	if(cached.second)
-		return *cached.first;
+	{
+		if(highPrecisionWidth)
+			*highPrecisionWidth = *cached.first;
+		return ceil(*cached.first);
+	}
 	
 	const string buf = ReplaceCharacters(str);
-	int w = 0;
+	double w = 0;
 	if(sources.size() == 1 || sources[0]->FindUnsupported(buf) == buf.length())
-		w = ceil(sources[0]->Width(buf));
+		w = sources[0]->Width(buf);
 	else
 	{
-		double width = 0.;
 		size_t pos = 0;
 		vector<pair<size_t,size_t>> sections = Prepare(buf);
 		for(const auto &section : sections)
 		{
 			string tmp(buf, pos, section.second - pos);
-			width += sources[section.first]->Width(tmp);
+			w += sources[section.first]->Width(tmp);
 			pos = section.second;
 		}
-		w = ceil(width);
 	}
-	widthCache.Set(str, int(w));
-	return w;
+	widthCache.Set(str, double(w));
+	if(highPrecisionWidth)
+		*highPrecisionWidth = w;
+	return ceil(w);
 }
 
 

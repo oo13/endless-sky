@@ -16,6 +16,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Point.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstring>
 #include <iterator>
 #include <numeric>
@@ -297,6 +298,7 @@ void WrappedText::SetText(const char *it, size_t length)
 
 
 
+#include <iostream>
 void WrappedText::Wrap()
 {
 	height = 0;
@@ -321,16 +323,19 @@ void WrappedText::Wrap()
 
 	// This is a width of a block.
 	vector<int> widthOfBlock;
+	// The high precision width except any interword space.
+	vector<double> highPrecisionWidthOfBlock;
 	// This is the width that a block would add to a line, except the block is at the beginning of line.
 	vector<int> additionalWidth;
 	int defered = 0;
 	for(const auto &block : blocks)
 	{
+		highPrecisionWidthOfBlock.push_back(0.0);
 		if(block.isInterwordSpace)
 			// An interword space is not drawn, and its block has a single character.
 			widthOfBlock.push_back(Space(Font::DecodeCodePoint(block.s, 0)));
 		else
-			widthOfBlock.push_back(p.font->Width(block.s));
+			widthOfBlock.push_back(p.font->Width(block.s, &highPrecisionWidthOfBlock.back()));
 		
 		if(block.isInterwordSpace || block.isSpace)
 		{
@@ -393,6 +398,11 @@ void WrappedText::Wrap()
 				const size_t lineBegin = words.size();
 				// Space weight of the words.
 				vector<int> spaceWeights;
+				// The high precision width in this line.
+				vector<double> widthInLine;
+				// Check if all words in this line is separated by an interword space.
+				bool spaceSepareted = true;
+				bool prevIsSpace = !blocks[blockBegin].isInterwordSpace;
 				// Generating the words to draw.
 				for(size_t m = blockBegin; m < blockEnd; ++m)
 				{
@@ -402,10 +412,15 @@ void WrappedText::Wrap()
 						word.s = move(blocks[m].s);
 						words.push_back(word);
 						spaceWeights.push_back(blocks[m].spaceWeight);
+						widthInLine.push_back(highPrecisionWidthOfBlock[m]);
 					}
 					else if(!spaceWeights.empty())
 						// Enable the space weight of this interword space.
 						spaceWeights.back() = max(spaceWeights.back(), blocks[m].spaceWeight);
+					
+					// Check the words in thie line is separeted by a space.
+					spaceSepareted &= prevIsSpace != blocks[m].isInterwordSpace;
+					prevIsSpace = blocks[m].isInterwordSpace;
 					
 					// Proceed to the next x potision.
 					word.x += widthOfBlock[m];
@@ -413,6 +428,9 @@ void WrappedText::Wrap()
 				
 				// Adjust the spacing of words.
 				AdjustLine(words, lineBegin, word.x, isEnd, spaceWeights);
+				// Try to reduce the number of words. It has no effect in space-separated-languages.
+				if(!spaceSepareted)
+					TryToReduceWords(words, lineBegin, widthInLine);
 				
 				// The next word will be the first on the next line.
 				word.y += p.lineHeight;
@@ -477,6 +495,39 @@ void WrappedText::AdjustLine(std::vector<Word> &words,
 		for(int i = 0; i < wordCount; ++i)
 			words[lineBegin + i].x += shift;
 	}
+}
+
+
+// In CJK, a text in words has mostly a single character, because a line can be wrapped at almost everywhere.
+// This function merges back-to-back words to the extent that the layout does not change.
+// It might reduce CPU time.
+void WrappedText::TryToReduceWords(std::vector<Word> &words, size_t lineBegin,
+	const std::vector<double> &widthInLine) const
+{
+	const size_t wordCount = words.size() - lineBegin;
+	if(wordCount <= 1)
+		return;
+	
+	const double allowableError = 0.125;
+	std::vector<Word> newWords;
+	newWords.push_back(move(words[lineBegin]));
+	double endX = widthInLine[0];
+	for(size_t i = 1; i < wordCount; ++i)
+	{
+		const size_t wn = lineBegin + i;
+		assert(words[wn].x >= endX);
+		if(words[wn].x - endX <= allowableError)
+			newWords.back().s += words[wn].s;
+		else
+		{
+			endX = words[wn].x;
+			newWords.push_back(move(words[wn]));
+		}
+		endX += widthInLine[i];
+	}
+	words.erase(words.begin() + lineBegin, words.end());
+	for(auto &w : newWords)
+		words.push_back(move(w));
 }
 
 

@@ -78,6 +78,8 @@ private:
 	void Wrap();
 	class Word;
 	void AdjustLine(std::vector<Word> &words, size_t lineBegin, int lineWidth, bool isEnd, const std::vector<int> &spaceWeight) const;
+	void TryToReduceWords(std::vector<Word> &words, size_t lineBegin,
+		const std::vector<double> &widthInLine) const;
 	int Space(char32_t c) const;
 	void ExpireCache();
 	
