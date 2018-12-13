@@ -298,7 +298,6 @@ void WrappedText::SetText(const char *it, size_t length)
 
 
 
-#include <iostream>
 void WrappedText::Wrap()
 {
 	height = 0;
