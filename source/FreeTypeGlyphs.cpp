@@ -424,20 +424,17 @@ void FreeTypeGlyphs::Shape(vector<GlyphData> &arr, double x, double y) const
 // Render the text, caching the result for some time.
 const FreeTypeGlyphs::RenderedText &FreeTypeGlyphs::Render(const string &str, double x, double y, bool showUnderlines) const
 {
-	FT_Error error;
-	
-	if(showUnderlines && str.find('_') == string::npos)
-		showUnderlines = false;
-	
 	FT_Vector origin = { To26Dot6(x - floor(x)), To26Dot6(ceil(y) - y) };
 	
 	// Return if already cached.
-	CacheKey key = make_pair(str, origin.x + (origin.y << 6) + (showUnderlines << 12));
+	const CacheKey key = make_pair(str, origin.x + (origin.y << 6) + (showUnderlines << 12));
 	auto cached = cache.Use(key);
 	if(cached.second)
-	{
 		return *cached.first;
-	}
+	
+	FT_Error error;
+	if(showUnderlines && str.find('_') == string::npos)
+		showUnderlines = false;
 	
 	// Shape the text.
 	vector<GlyphData> arr = Translate(str);
@@ -583,7 +580,7 @@ const FreeTypeGlyphs::RenderedText &FreeTypeGlyphs::Render(const string &str, do
 	if(!text.texture)
 		glGenTextures(1, &text.texture);
 	glBindTexture(GL_TEXTURE_2D, text.texture);
-	const auto &cachedText = cache.New(key, RenderedText(text));
+	const auto &cachedText = cache.New(key, move(text));
 	
 	// Use linear interpolation and no wrapping.
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
