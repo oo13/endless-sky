@@ -131,8 +131,6 @@ FreeTypeGlyphs::FreeTypeGlyphs()
 
 FreeTypeGlyphs::~FreeTypeGlyphs()
 {
-	cache.ForAll([](RenderedText &x){ if(x.texture) glDeleteTextures(1, &x.texture); });
-	
 	if(face)
 		FT_Done_Face(face);
 	
@@ -585,7 +583,7 @@ const FreeTypeGlyphs::RenderedText &FreeTypeGlyphs::Render(const string &str, do
 	if(!text.texture)
 		glGenTextures(1, &text.texture);
 	glBindTexture(GL_TEXTURE_2D, text.texture);
-	const auto &cachedText = cache.Set(key, RenderedText(text));
+	const auto &cachedText = cache.New(key, RenderedText(text));
 	
 	// Use linear interpolation and no wrapping.
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

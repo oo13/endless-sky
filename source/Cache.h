@@ -55,13 +55,24 @@ private:
 
 
 
+// Do nothing at recycle of a cache element.
+template<class T>
+class DoNothingAtRecycle {
+public:
+	void operator()(T& data) const
+	{}
+};
+
+
+
 // This is a generic cache class which has some template parameters same as unordered_map.
 // Key is a type of the key values.
 // T is a type of the mapped values.
 // Hash is a type of the unary function that returns the hash value of a key value.
 // If autoExpired is true, its instance may recycle a value updated before one generation. It means that any data keep for one generation at least.
 // If autoExpired is false, the cache keeps all data unless Expire() has been called.
-template<class Key, class T, bool autoExpired = false, class Hash = std::hash<Key>>
+// AtRecycle is a function class. The function is called before recycling a value.
+template<class Key, class T, bool autoExpired = false, class Hash = std::hash<Key>, class AtRecycle = DoNothingAtRecycle<T>>
 class Cache : public CacheBase {
 public:
 	Cache();
@@ -77,21 +88,21 @@ public:
 	// This function set the useCount to 1.
 	// Note: The newData is rvalue reference. You may use std::move() or construct a temporary object.
 	const T &Set(const Key &key, T &&newData);
+	// Same as Set(), but it does not try to recycle a value in this instance.
+	const T &New(const Key &key, T &&newData);
 	// Use a value mapped the key.
 	// If a return value.second is true, then the return value.first is the mapped value.
 	// Otherwise, this cache has no value mapped the key.
 	std::pair<const T*, bool> Use(const Key &key);
-	// Recycle an expired value on a caller side.
+	// Recycle an expired value on a caller side. This instance does not call the AtRecycle.
 	// If a return value.second is false, this cache has no expired data.
 	std::pair<T, bool> Recycle();
 	// Decrement the useCount and expire the value mapped the key if useCount == 0.
 	// The key must not be expired.
 	// This function has no effect for an auto expired cache.
 	void Expire(const Key &key);
-	// Clear all data in this cache.
+	// Clear all data in this cache. This function calls AtRecycle for all values.
 	void Clear();
-	// Map function for all data in this cache including expried one.
-	void ForAll(std::function<void(T&)> f);
 
 private:
 	struct ContainerElement;
@@ -138,8 +149,8 @@ private:
 
 
 
-template<class Key, class T, bool autoExpired, class Hash>
-Cache<Key, T, autoExpired, Hash>::Cache()
+template<class Key, class T, bool autoExpired, class Hash, class AtRecycle>
+Cache<Key, T, autoExpired, Hash, AtRecycle>::Cache()
 	: container(), directory(), expired(container.end()), readyToRecycle(container.end())
 {
 	RegisterCacheObject(this);
@@ -147,17 +158,20 @@ Cache<Key, T, autoExpired, Hash>::Cache()
 
 
 
-template<class Key, class T, bool autoExpired, class Hash>
-Cache<Key, T, autoExpired, Hash>::~Cache() noexcept
+template<class Key, class T, bool autoExpired, class Hash, class AtRecycle>
+Cache<Key, T, autoExpired, Hash, AtRecycle>::~Cache() noexcept
 {
+	Clear();
 	UnregisterCacheObject(this);
 }
 
 
 
-template<class Key, class T, bool autoExpired, class Hash>
-Cache<Key, T, autoExpired, Hash> &Cache<Key, T, autoExpired, Hash>::operator=(Cache<Key, T, autoExpired, Hash> &&a)
+template<class Key, class T, bool autoExpired, class Hash, class AtRecycle>
+Cache<Key, T, autoExpired, Hash, AtRecycle>
+&Cache<Key, T, autoExpired, Hash, AtRecycle>::operator=(Cache<Key, T, autoExpired, Hash, AtRecycle> &&a)
 {
+	Clear();
 	const bool noExpired = a.expired == a.container.end();
 	const bool noReadyToRecycle = a.readyToRecycle == a.container.end();
 	container = std::move(a.container);
@@ -176,16 +190,15 @@ Cache<Key, T, autoExpired, Hash> &Cache<Key, T, autoExpired, Hash>::operator=(Ca
 
 
 
-template<class Key, class T, bool autoExpired, class Hash>
-const T &Cache<Key, T, autoExpired, Hash>::Set(const Key &key, T &&newData)
+template<class Key, class T, bool autoExpired, class Hash, class AtRecycle>
+const T &Cache<Key, T, autoExpired, Hash, AtRecycle>::Set(const Key &key, T &&newData)
 {
 	if(readyToRecycle == container.end())
-	{
 		container.emplace_front(newData, 1, directory.end());
-	}
 	else
 	{
 		auto it = --container.end();
+		AtRecycle()(it->data);
 		AdjustPointerWhenErase(it);
 		it->data = std::move(newData);
 		if(!autoExpired)
@@ -201,8 +214,20 @@ const T &Cache<Key, T, autoExpired, Hash>::Set(const Key &key, T &&newData)
 
 
 
-template<class Key, class T, bool autoExpired, class Hash>
-std::pair<const T*, bool> Cache<Key, T, autoExpired, Hash>::Use(const Key &key)
+template<class Key, class T, bool autoExpired, class Hash, class AtRecycle>
+const T &Cache<Key, T, autoExpired, Hash, AtRecycle>::New(const Key &key, T &&newData)
+{
+	container.emplace_front(newData, 1, directory.end());
+	const auto p = directory.emplace(key, container.begin());
+	assert(p.second);
+	container.front().index = p.first;
+	return container.front().data;
+}
+
+
+
+template<class Key, class T, bool autoExpired, class Hash, class AtRecycle>
+std::pair<const T*, bool> Cache<Key, T, autoExpired, Hash, AtRecycle>::Use(const Key &key)
 {
 	auto index = directory.find(key);
 	if(index == directory.end())
@@ -220,8 +245,8 @@ std::pair<const T*, bool> Cache<Key, T, autoExpired, Hash>::Use(const Key &key)
 
 
 
-template<class Key, class T, bool autoExpired, class Hash>
-std::pair<T, bool> Cache<Key, T, autoExpired, Hash>::Recycle()
+template<class Key, class T, bool autoExpired, class Hash, class AtRecycle>
+std::pair<T, bool> Cache<Key, T, autoExpired, Hash, AtRecycle>::Recycle()
 {
 	if(readyToRecycle == container.end())
 		return std::make_pair(T(), false);
@@ -238,8 +263,8 @@ std::pair<T, bool> Cache<Key, T, autoExpired, Hash>::Recycle()
 
 
 
-template<class Key, class T, bool autoExpired, class Hash>
-void Cache<Key, T, autoExpired, Hash>::Expire(const Key &key)
+template<class Key, class T, bool autoExpired, class Hash, class AtRecycle>
+void Cache<Key, T, autoExpired, Hash, AtRecycle>::Expire(const Key &key)
 {
 	if(autoExpired)
 		return;
@@ -262,22 +287,15 @@ void Cache<Key, T, autoExpired, Hash>::Expire(const Key &key)
 
 
 
-template<class Key, class T, bool autoExpired, class Hash>
-void Cache<Key, T, autoExpired, Hash>::Clear()
+template<class Key, class T, bool autoExpired, class Hash, class AtRecycle>
+void Cache<Key, T, autoExpired, Hash, AtRecycle>::Clear()
 {
+	for(auto &value : container)
+		AtRecycle()(value.data);
 	container.clear();
 	directory.clear();
 	expired = container.end();
 	readyToRecycle = container.end();
-}
-
-
-
-template<class Key, class T, bool autoExpired, class Hash>
-void Cache<Key, T, autoExpired, Hash>::ForAll(std::function<void(T&)> f)
-{
-	for(auto &elem : container)
-		f(elem.data);
 }
 
 

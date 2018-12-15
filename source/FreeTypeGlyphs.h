@@ -77,6 +77,15 @@ private:
 		// Offset from the floored origin to the center of the sprite.
 		Point center;
 	};
+	// Function to recycle it for RenderedText.
+	class AtRecycleForRenderedText {
+	public:
+		void operator()(RenderedText &v) const
+		{
+			if(v.texture)
+				glDeleteTextures(1, &v.texture);
+		}
+	};
 	// Hash function of CacheKey.
 	struct CacheKeyHash {
 		typedef CacheKey argument_type;
@@ -123,7 +132,7 @@ private:
 	mutable int screenHeight;
 	
 	// Cache of rendered text.
-	mutable Cache<CacheKey, RenderedText, true, CacheKeyHash> cache;
+	mutable Cache<CacheKey, RenderedText, true, CacheKeyHash, AtRecycleForRenderedText> cache;
 };
 
 
