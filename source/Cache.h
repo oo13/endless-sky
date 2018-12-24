@@ -81,7 +81,8 @@ public:
 	Cache(const Cache &a) = delete;
 	Cache &operator=(const Cache &a) = delete;
 	// But it may move.
-	Cache &operator=(Cache &&a);
+	Cache(Cache &&a) noexcept;
+	Cache &operator=(Cache &&a) noexcept;
 	
 	// Set a value and return it owned by this cache.
 	// Don't set the key that exists in the cache.
@@ -168,9 +169,20 @@ Cache<Key, T, autoExpired, Hash, AtRecycle>::~Cache() noexcept
 
 
 template<class Key, class T, bool autoExpired, class Hash, class AtRecycle>
-Cache<Key, T, autoExpired, Hash, AtRecycle>
-&Cache<Key, T, autoExpired, Hash, AtRecycle>::operator=(Cache<Key, T, autoExpired, Hash, AtRecycle> &&a)
+Cache<Key, T, autoExpired, Hash, AtRecycle>::Cache(Cache<Key, T, autoExpired, Hash, AtRecycle> &&a) noexcept
+	: Cache()
 {
+	*this = std::move(a);
+}
+
+
+
+template<class Key, class T, bool autoExpired, class Hash, class AtRecycle>
+Cache<Key, T, autoExpired, Hash, AtRecycle>
+&Cache<Key, T, autoExpired, Hash, AtRecycle>::operator=(Cache<Key, T, autoExpired, Hash, AtRecycle> &&a) noexcept
+{
+	if(this == &a)
+		return *this;
 	Clear();
 	const bool noExpired = a.expired == a.container.end();
 	const bool noReadyToRecycle = a.readyToRecycle == a.container.end();
