@@ -15,6 +15,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Font.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstring>
 #include <iterator>
 #include <numeric>
@@ -75,12 +76,22 @@ namespace {
 	vector<MergedCharactersBlock> divideIntoBlocks(const string &text);
 }
 
+Cache<WrappedText::ParamType, WrappedText::CacheData, false, WrappedText::ParamTypeHash> WrappedText::cache;
+
 
 
 WrappedText::WrappedText()
-	: font(nullptr), space(0), wrapWidth(1000), tabWidth(0),
-	  lineHeight(0), paragraphBreak(0), alignment(JUSTIFIED), height(0)
+	: p(), cachedWords(nullptr), height(0)
 {
+}
+
+
+
+WrappedText::WrappedText(const WrappedText &a)
+	: p(a.p), cachedWords(nullptr), height(0)
+{
+	// Ensure consistency of cache.
+	Wrap();
 }
 
 
@@ -92,18 +103,37 @@ WrappedText::WrappedText(const Font &font)
 }
 
 
+WrappedText::~WrappedText() noexcept
+{
+	ExpireCache();
+}
+
+
+
+const WrappedText &WrappedText::operator=(const WrappedText &a)
+{
+	p = a.p;
+	// Ensure consistency of cache.
+	cachedWords = nullptr;
+	height = 0;
+	Wrap();
+	return *this;
+}
+
+
 
 // Set the alignment mode.
 WrappedText::Align WrappedText::Alignment() const
 {
-	return alignment;
+	return p.alignment;
 }
 
 
 
 void WrappedText::SetAlignment(Align align)
 {
-	alignment = align;
+	ExpireCache();
+	p.alignment = align;
 }
 
 
@@ -111,14 +141,15 @@ void WrappedText::SetAlignment(Align align)
 // Set the wrap width. This does not include any margins.
 int WrappedText::WrapWidth() const
 {
-	return wrapWidth;
+	return p.wrapWidth;
 }
 
 
 
 void WrappedText::SetWrapWidth(int width)
 {
-	wrapWidth = width;
+	ExpireCache();
+	p.wrapWidth = width;
 }
 
 
@@ -128,10 +159,11 @@ void WrappedText::SetWrapWidth(int width)
 // and the alignment separately.
 void WrappedText::SetFont(const Font &font)
 {
-	this->font = &font;
+	ExpireCache();
+	this->p.font = &font;
 	
-	space = font.Space();
-	SetTabWidth(4 * space);
+	p.space = font.Space();
+	SetTabWidth(4 * p.space);
 	SetLineHeight(font.Height() * 120 / 100);
 	SetParagraphBreak(font.Height() * 40 / 100);
 }
@@ -141,14 +173,15 @@ void WrappedText::SetFont(const Font &font)
 // Set the width in pixels of a single '\t' character.
 int WrappedText::TabWidth() const
 {
-	return tabWidth;
+	return p.tabWidth;
 }
 
 
 
 void WrappedText::SetTabWidth(int width)
 {
-	tabWidth = width;
+	ExpireCache();
+	p.tabWidth = width;
 }
 
 
@@ -156,14 +189,15 @@ void WrappedText::SetTabWidth(int width)
 // Set the height in pixels of one line of text within a paragraph.
 int WrappedText::LineHeight() const
 {
-	return lineHeight;
+	return p.lineHeight;
 }
 
 
 
 void WrappedText::SetLineHeight(int height)
 {
-	lineHeight = height;
+	ExpireCache();
+	p.lineHeight = height;
 }
 
 
@@ -171,14 +205,15 @@ void WrappedText::SetLineHeight(int height)
 // Set the extra spacing in pixels to be added in between paragraphs.
 int WrappedText::ParagraphBreak() const
 {
-	return paragraphBreak;
+	return p.paragraphBreak;
 }
 
 
 
 void WrappedText::SetParagraphBreak(int height)
 {
-	paragraphBreak = height;
+	ExpireCache();
+	p.paragraphBreak = height;
 }
 
 
@@ -214,8 +249,17 @@ int WrappedText::Height() const
 // Draw the text.
 void WrappedText::Draw(const Point &topLeft, const Color &color) const
 {
-	for(const Word &w : words)
-		font->Draw(w.Str(), w.Pos() + topLeft, color);
+	if(!cachedWords)
+		return;
+	for(const Word &w : *cachedWords)
+		p.font->Draw(w.Str(), w.Pos() + topLeft, color);
+}
+
+
+
+void WrappedText::SetCacheUpdateInterval(size_t newInterval)
+{
+	cache.SetUpdateInterval(newInterval);
 }
 
 
@@ -245,10 +289,10 @@ void WrappedText::SetText(const char *it, size_t length)
 {
 	// Clear any previous word-wrapping data. It becomes invalid as soon as the
 	// underlying text buffer changes.
-	words.clear();
+	ExpireCache();
 	
 	// Reallocate that buffer.
-	text.assign(it, length);
+	p.text.assign(it, length);
 }
 
 
@@ -256,10 +300,19 @@ void WrappedText::SetText(const char *it, size_t length)
 void WrappedText::Wrap()
 {
 	height = 0;
-	if(text.empty() || !font)
+	if(p.text.empty() || !p.font)
 		return;
 	
-	vector<MergedCharactersBlock> blocks(divideIntoBlocks(text));
+	const auto cached = cache.Use(p);
+	if(cached.second)
+	{
+		cachedWords = &cached.first->words;
+		height = cached.first->height;
+		return;
+	}
+	
+	std::vector<Word> words;
+	vector<MergedCharactersBlock> blocks(divideIntoBlocks(p.text));
 	if(blocks.empty())
 		return;
 	// This is a sentinel.
@@ -268,16 +321,19 @@ void WrappedText::Wrap()
 
 	// This is a width of a block.
 	vector<int> widthOfBlock;
+	// The high precision width except any interword space.
+	vector<double> highPrecisionWidthOfBlock;
 	// This is the width that a block would add to a line, except the block is at the beginning of line.
 	vector<int> additionalWidth;
 	int defered = 0;
 	for(const auto &block : blocks)
 	{
+		highPrecisionWidthOfBlock.push_back(0.0);
 		if(block.isInterwordSpace)
 			// An interword space is not drawn, and its block has a single character.
 			widthOfBlock.push_back(Space(Font::DecodeCodePoint(block.s, 0)));
 		else
-			widthOfBlock.push_back(font->Width(block.s));
+			widthOfBlock.push_back(p.font->Width(block.s, &highPrecisionWidthOfBlock.back()));
 		
 		if(block.isInterwordSpace || block.isSpace)
 		{
@@ -317,7 +373,7 @@ void WrappedText::Wrap()
 		if(block.lineBreakOpportunity != NO_BREAK_ALLOWED)
 		{
 			// If adding this block would overflow the length of the line.
-			const bool needToBreak = lineWidth > wrapWidth;
+			const bool needToBreak = lineWidth > p.wrapWidth;
 			
 			if(!needToBreak)
 				blockEnd = n + 1;
@@ -340,33 +396,46 @@ void WrappedText::Wrap()
 				const size_t lineBegin = words.size();
 				// Space weight of the words.
 				vector<int> spaceWeights;
+				// The high precision width in this line.
+				vector<double> widthInLine;
+				// Check if all words in this line is separated by an interword space.
+				bool spaceSepareted = true;
+				bool prevIsSpace = !blocks[blockBegin].isInterwordSpace;
 				// Generating the words to draw.
 				for(size_t m = blockBegin; m < blockEnd; ++m)
 				{
 					// An interword space is not drawn.
 					if(!blocks[m].isInterwordSpace)
 					{
-						swap(word.s, blocks[m].s);
+						word.s = move(blocks[m].s);
 						words.push_back(word);
 						spaceWeights.push_back(blocks[m].spaceWeight);
+						widthInLine.push_back(highPrecisionWidthOfBlock[m]);
 					}
 					else if(!spaceWeights.empty())
 						// Enable the space weight of this interword space.
 						spaceWeights.back() = max(spaceWeights.back(), blocks[m].spaceWeight);
+					
+					// Check the words in thie line is separeted by a space.
+					spaceSepareted &= prevIsSpace != blocks[m].isInterwordSpace;
+					prevIsSpace = blocks[m].isInterwordSpace;
 					
 					// Proceed to the next x potision.
 					word.x += widthOfBlock[m];
 				}
 				
 				// Adjust the spacing of words.
-				AdjustLine(lineBegin, word.x, isEnd, spaceWeights);
+				AdjustLine(words, lineBegin, word.x, isEnd, spaceWeights);
+				// Try to reduce the number of words. It has no effect in space-separated-languages.
+				if(!spaceSepareted)
+					TryToReduceWords(words, lineBegin, widthInLine);
 				
 				// The next word will be the first on the next line.
-				word.y += lineHeight;
+				word.y += p.lineHeight;
 				word.x = 0;
 				if(blocks[nextLineBegin-1].isParagraphEnd)
 					// Here is a paragraph break.
-					word.y += paragraphBreak;
+					word.y += p.paragraphBreak;
 				if(nextLineBegin >= blocks.size())
 					break;
 				lineWidth = widthOfBlock[nextLineBegin] - additionalWidth[nextLineBegin];
@@ -377,23 +446,29 @@ void WrappedText::Wrap()
 	}
 	
 	height = word.y;
+	
+	CacheData setData;
+	setData.words.swap(words);
+	setData.height = height;
+	cachedWords = &cache.Set(p, move(setData)).words;
 }
 
 
 
-void WrappedText::AdjustLine(size_t lineBegin, int lineWidth, bool isEnd, const vector<int> &spaceWeight)
+void WrappedText::AdjustLine(std::vector<Word> &words,
+	size_t lineBegin, int lineWidth, bool isEnd, const vector<int> &spaceWeight) const
 {
 	int wordCount = words.size() - lineBegin;
 	if(wordCount == 0)
 		return;
 	
-	int extraSpace = wrapWidth - lineWidth;
+	int extraSpace = p.wrapWidth - lineWidth;
 	
 	// Figure out how much space is left over. Depending on the alignment, we
 	// will add that space to the left, to the right, to both sides, or to the
 	// space in between the words. Exception: the last line of a "justified"
 	// paragraph is left aligned, not justified.
-	if(alignment == JUSTIFIED && !isEnd && wordCount > 1)
+	if(p.alignment == JUSTIFIED && !isEnd && wordCount > 1)
 	{
 		const int totalSpaceWeight = accumulate(spaceWeight.begin(), prev(spaceWeight.end()), 0);
 		if(totalSpaceWeight == 0)
@@ -412,19 +487,63 @@ void WrappedText::AdjustLine(size_t lineBegin, int lineWidth, bool isEnd, const 
 			}
 		}
 	}
-	else if(alignment == CENTER || alignment == RIGHT)
+	else if(p.alignment == CENTER || p.alignment == RIGHT)
 	{
-		int shift = (alignment == CENTER) ? extraSpace / 2 : extraSpace;
+		int shift = (p.alignment == CENTER) ? extraSpace / 2 : extraSpace;
 		for(int i = 0; i < wordCount; ++i)
 			words[lineBegin + i].x += shift;
 	}
 }
 
 
+// In CJK, a text in words has mostly a single character, because a line can be wrapped at almost everywhere.
+// This function merges back-to-back words to the extent that the layout does not change.
+// It might reduce CPU time.
+void WrappedText::TryToReduceWords(std::vector<Word> &words, size_t lineBegin,
+	const std::vector<double> &widthInLine) const
+{
+	const size_t wordCount = words.size() - lineBegin;
+	if(wordCount <= 1)
+		return;
+	
+	const double allowableError = 0.125;
+	std::vector<Word> newWords;
+	newWords.push_back(move(words[lineBegin]));
+	double endX = widthInLine[0];
+	for(size_t i = 1; i < wordCount; ++i)
+	{
+		const size_t wn = lineBegin + i;
+		assert(words[wn].x >= endX);
+		if(words[wn].x - endX <= allowableError)
+			newWords.back().s += words[wn].s;
+		else
+		{
+			endX = words[wn].x;
+			newWords.push_back(move(words[wn]));
+		}
+		endX += widthInLine[i];
+	}
+	words.erase(words.begin() + lineBegin, words.end());
+	for(auto &w : newWords)
+		words.push_back(move(w));
+}
+
+
 
 int WrappedText::Space(char32_t c) const
 {
-	return (c == ' ' || c == U'\U000000A0') ? space : (c == '\t') ? tabWidth : 0;
+	return (c == ' ' || c == U'\U000000A0') ? p.space : (c == '\t') ? p.tabWidth : 0;
+}
+
+
+
+void WrappedText::ExpireCache()
+{
+	if(cachedWords)
+	{
+		cache.Expire(p);
+		cachedWords = nullptr;
+	}
 }
 
 

@@ -22,6 +22,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 using namespace std;
 using namespace Gettext;
@@ -78,6 +79,8 @@ namespace {
 Font::Font()
 	: size(0), heightOverride(0)
 {
+	widthCache.SetUpdateInterval(3600);
+	drawCache.SetUpdateInterval(3600);
 }
 
 
@@ -204,46 +207,84 @@ void Font::DrawAliased(const string &str, double x, double y, const Color &color
 		return;
 	
 	y += sources[0]->Baseline();
-	string buf = ReplaceCharacters(str);
-	if(sources.size() == 1 || sources[0]->FindUnsupported(buf) == buf.length())
+	if(sources.size() == 1)
+	{
+		const string buf = ReplaceCharacters(str);
 		sources[0]->Draw(buf, x, y, color);
+	}
 	else
 	{
-		size_t pos = 0;
-		vector<pair<size_t,size_t>> sections = Prepare(buf);
-		for(const auto &section : sections)
+		const auto cached = drawCache.Use(str);
+		if(cached.second)
 		{
-			string tmp(buf, pos, section.second - pos);
-			sources[section.first]->Draw(tmp, x, y, color);
-			x += sources[section.first]->Width(tmp);
-			pos = section.second;
+			for(const auto &section : *cached.first)
+			{
+				sources[section.sourceNumber]->Draw(section.text, x, y, color);
+				x += section.width;
+			}
+		}
+		else
+		{
+			vector<DrawnData> cacheData;
+			const string buf = ReplaceCharacters(str);
+			if(sources[0]->FindUnsupported(buf) == buf.length())
+			{
+				sources[0]->Draw(buf, x, y, color);
+				cacheData.emplace_back(buf, 0, 0.0);
+			}
+			else
+			{
+				size_t pos = 0;
+				vector<pair<size_t,size_t>> sections = Prepare(buf);
+				for(const auto &section : sections)
+				{
+					string tmp(buf, pos, section.second - pos);
+					sources[section.first]->Draw(tmp, x, y, color);
+					const double w = sources[section.first]->Width(tmp);
+					x += w;
+					pos = section.second;
+					cacheData.emplace_back(tmp, section.first, w);
+				}
+			}
+			drawCache.Set(str, move(cacheData));
 		}
 	}
 }
 
 
 
-int Font::Width(const string &str) const
+int Font::Width(const string &str, double *highPrecisionWidth) const
 {
 	if(sources.empty())
 		return 0;
 	
-	string buf = ReplaceCharacters(str);
+	const auto cached = widthCache.Use(str);
+	if(cached.second)
+	{
+		if(highPrecisionWidth)
+			*highPrecisionWidth = *cached.first;
+		return ceil(*cached.first);
+	}
+	
+	const string buf = ReplaceCharacters(str);
+	double w = 0;
 	if(sources.size() == 1 || sources[0]->FindUnsupported(buf) == buf.length())
-		return ceil(sources[0]->Width(buf));
+		w = sources[0]->Width(buf);
 	else
 	{
-		double width = 0.;
 		size_t pos = 0;
 		vector<pair<size_t,size_t>> sections = Prepare(buf);
 		for(const auto &section : sections)
 		{
 			string tmp(buf, pos, section.second - pos);
-			width += sources[section.first]->Width(tmp);
+			w += sources[section.first]->Width(tmp);
 			pos = section.second;
 		}
-		return ceil(width);
 	}
+	widthCache.Set(str, double(w));
+	if(highPrecisionWidth)
+		*highPrecisionWidth = w;
+	return ceil(w);
 }
 
 

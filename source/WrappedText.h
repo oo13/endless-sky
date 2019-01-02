@@ -13,6 +13,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #ifndef WRAPPED_TEXT_H_
 #define WRAPPED_TEXT_H_
 
+#include "Cache.h"
 #include "Point.h"
 
 #include <string>
@@ -20,6 +21,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 class Color;
 class Font;
+struct WrappedTextCacheKey;
 
 
 
@@ -28,7 +30,10 @@ class Font;
 class WrappedText {
 public:
 	WrappedText();
+	WrappedText(const WrappedText &a);
 	explicit WrappedText(const Font &font);
+	~WrappedText() noexcept;
+	const WrappedText &operator=(const WrappedText &a);
 	
 	// Set the alignment mode.
 	enum Align {LEFT, CENTER, RIGHT, JUSTIFIED};
@@ -66,13 +71,17 @@ public:
 	// Draw the text.
 	void Draw(const Point &topLeft, const Color &color) const;
 	
+	static void SetCacheUpdateInterval(size_t newInterval);
 	
 private:
 	void SetText(const char *it, size_t length);
 	void Wrap();
-	void AdjustLine(size_t lineBegin, int lineWidth, bool isEnd, const std::vector<int> &spaceWeight);
+	class Word;
+	void AdjustLine(std::vector<Word> &words, size_t lineBegin, int lineWidth, bool isEnd, const std::vector<int> &spaceWeight) const;
+	void TryToReduceWords(std::vector<Word> &words, size_t lineBegin,
+		const std::vector<double> &widthInLine) const;
 	int Space(char32_t c) const;
-	
+	void ExpireCache();
 	
 private:
 	// The returned text is a series of words and (x, y) positions:
@@ -83,28 +92,59 @@ private:
 		const std::string &Str() const;
 		Point Pos() const;
 		
-	private:
 		std::string s;
 		int x;
 		int y;
-		
-		friend class WrappedText;
 	};
 	
+	// The parameter of Wrap() and the key value of cache.
+	struct ParamType {
+		std::string text;
+		const Font *font;
+		int space;
+		int wrapWidth;
+		int tabWidth;
+		int lineHeight;
+		int paragraphBreak;
+		Align alignment;
+		
+		ParamType()
+			: text(), font(nullptr), space(0), wrapWidth(1000), tabWidth(0),
+			  lineHeight(0), paragraphBreak(0), alignment(JUSTIFIED)
+		{}
+		bool operator==(const ParamType &b) const
+		{
+			return text == b.text
+				&& font == b.font
+				&& space == b.space
+				&& wrapWidth == b.wrapWidth
+				&& tabWidth == b.tabWidth
+				&& lineHeight == b.lineHeight
+				&& paragraphBreak == b.paragraphBreak
+				&& alignment == b.alignment;
+		}
+	};
+	// Hash function of ParamType.
+	struct ParamTypeHash {
+		typedef ParamType argument_type;
+		typedef std::size_t result_type;
+		result_type operator() (argument_type const &s) const noexcept
+		{
+			return std::hash<std::string>()(s.text);
+		}
+	};
+	// The result of Wrap() and the mapped value of cache.
+	struct CacheData {
+		std::vector<Word> words;
+		int height;
+	};
 	
 private:
-	const Font *font;
+	ParamType p;
 	
-	int space;
-	int wrapWidth;
-	int tabWidth;
-	int lineHeight;
-	int paragraphBreak;
-	Align alignment;
-	
-	std::string text;
-	std::vector<Word> words;
+	const std::vector<Word>* cachedWords;
 	int height;
+	static Cache<ParamType, CacheData, false, ParamTypeHash> cache;
 };
 
 

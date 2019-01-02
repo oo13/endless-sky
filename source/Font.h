@@ -13,6 +13,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #ifndef FONT_H_
 #define FONT_H_
 
+#include "Cache.h"
+
 #include <memory>
 #include <string>
 #include <utility>
@@ -37,7 +39,7 @@ public:
 	void Draw(const std::string &str, const Point &point, const Color &color) const;
 	void DrawAliased(const std::string &str, double x, double y, const Color &color) const;
 	
-	int Width(const std::string &str) const;
+	int Width(const std::string &str, double *highPrecisionWidth = nullptr) const;
 	std::string Truncate(const std::string &str, int width, bool ellipsis = true) const;
 	std::string TruncateFront(const std::string &str, int width, bool ellipsis = true) const;
 	std::string TruncateMiddle(const std::string &str, int width, bool ellipsis = true) const;
@@ -110,6 +112,17 @@ public:
 		virtual void SetUpShader() = 0;
 	};
 	
+	// A mapped value for drawCache.
+	// A text will draw with source[sourceNumber].
+	struct DrawnData {
+		std::string text;
+		size_t sourceNumber;
+		double width;
+		
+		DrawnData(const std::string &t, size_t s, double w)
+			: text(t), sourceNumber(s), width(w)
+		{}
+	};
 	
 private:
 	// Prepare a string for processing by multiple sources, producing source-end pairs.
@@ -120,6 +133,8 @@ private:
 	std::vector<std::shared_ptr<IGlyphs> > sources;
 	int size;
 	int heightOverride;
+	mutable Cache<std::string, double, true> widthCache;
+	mutable Cache<std::string, std::vector<DrawnData>, true> drawCache;
 };
 
 

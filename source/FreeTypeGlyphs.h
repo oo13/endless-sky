@@ -13,6 +13,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #ifndef FREE_TYPE_GLYPHS_H_
 #define FREE_TYPE_GLYPHS_H_
 
+#include "Cache.h"
 #include "Font.h"
 #include "Point.h"
 #include "Shader.h"
@@ -23,6 +24,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include FT_FREETYPE_H
 
 #include <chrono>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -74,8 +76,26 @@ private:
 		int height;
 		// Offset from the floored origin to the center of the sprite.
 		Point center;
-		// Last access time.
-		std::chrono::steady_clock::time_point timestamp;
+	};
+	// Function to recycle it for RenderedText.
+	class AtRecycleForRenderedText {
+	public:
+		void operator()(RenderedText &v) const
+		{
+			if(v.texture)
+				glDeleteTextures(1, &v.texture);
+		}
+	};
+	// Hash function of CacheKey.
+	struct CacheKeyHash {
+		typedef CacheKey argument_type;
+		typedef std::size_t result_type;
+		result_type operator() (argument_type const &s) const noexcept
+		{
+			const result_type h1 = std::hash<std::string>()(s.first);
+			const result_type h2 = std::hash<std::uint16_t>()(s.second);
+			return h1 ^ (h2 << 1);
+		}
 	};
 	
 	
@@ -86,7 +106,7 @@ private:
 	void Shape(std::vector<GlyphData> &arr, double x, double y) const;
 	
 	// Render the text, caching the result.
-	RenderedText &Render(const std::string &str, double x, double y, bool showUnderlines) const;
+	const RenderedText &Render(const std::string &str, double x, double y, bool showUnderlines) const;
 	
 	
 private:
@@ -112,7 +132,7 @@ private:
 	mutable int screenHeight;
 	
 	// Cache of rendered text.
-	mutable std::map<CacheKey,RenderedText> cache;
+	mutable Cache<CacheKey, RenderedText, true, CacheKeyHash, AtRecycleForRenderedText> cache;
 };
 
 
