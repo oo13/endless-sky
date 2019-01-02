@@ -14,8 +14,10 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "Color.h"
 #include "FontSet.h"
+#include "Format.h"
 #include "GameData.h"
 #include "Interface.h"
+#include "LocaleInfo.h"
 #include "News.h"
 #include "Planet.h"
 #include "PlayerInfo.h"
@@ -23,6 +25,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "UI.h"
 
 using namespace std;
+using namespace Gettext;
 
 
 
@@ -55,9 +58,9 @@ void SpaceportPanel::UpdateNews()
 	// because every time the functions in News are called, they return a new
 	// random element.
 	hasNews = true;
-	newsInfo.SetString("name", news->Name() + ':');
+	newsInfo.SetString("name", Format::StringF({T("%1%:"), news->Name()}));
 	newsInfo.SetSprite("portrait", news->Portrait());
-	newsMessage.Wrap('"' + news->Message() + '"');
+	newsMessage.Wrap(Format::StringF({T("\"%1%\""), news->Message()}));
 }
 
 

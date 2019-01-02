@@ -24,6 +24,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "GameData.h"
 #include "Government.h"
 #include "Interface.h"
+#include "LocaleInfo.h"
 #include "MapPanel.h"
 #include "Mask.h"
 #include "Messages.h"
@@ -59,6 +60,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <string>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	int RadarType(const Ship &ship, int step)
@@ -151,9 +153,11 @@ namespace {
 		string tag;
 		const string &gov = ship->GetGovernment()->GetName();
 		if(!ship->Name().empty())
-			tag = gov + " " + ship->Noun() + " \"" + ship->Name() + "\": ";
+			// TRANSLATORS: send message's header: %1%: government name, %2%: ship noun, %3%: ship name
+			tag = Format::StringF({T("%1% %2% \"%3%\": ", "Engine"), gov, ship->Noun(), ship->Name()});
 		else
-			tag = ship->ModelName() + " (" + gov + "): ";
+			// TRANSLATORS: send message's header: %1%: ship model name, %2%: government name
+			tag = Format::StringF({T("%1% (%2%): ", "Engine"), ship->ModelName(), gov});
 		
 		Messages::Add(tag + message);
 	}
@@ -543,7 +547,7 @@ void Engine::Step(bool isActive)
 	}
 	
 	if(flagship && flagship->IsOverheated())
-		Messages::Add("Your ship has overheated.");
+		Messages::Add(T("Your ship has overheated."));
 	
 	// Clear the HUD information from the previous frame.
 	info = Information();
@@ -576,14 +580,14 @@ void Engine::Step(bool isActive)
 		info.SetBar("disabled hull", min(flagship->Hull(), flagship->DisabledHull()), 20.);
 	}
 	info.SetString("credits",
-		Format::Credits(player.Accounts().Credits()) + " credits");
+		Format::Credits(player.Accounts().Credits()) + T(" credits", "Engine"));
 	bool isJumping = flagship && (flagship->Commands().Has(Command::JUMP) || flagship->IsEnteringHyperspace());
 	if(flagship && flagship->GetTargetStellar() && !isJumping)
 	{
 		const StellarObject *object = flagship->GetTargetStellar();
-		string navigationMode = flagship->Commands().Has(Command::LAND) ? "Landing on:" :
-			object->GetPlanet() && object->GetPlanet()->CanLand(*flagship) ? "Can land on:" :
-			"Cannot land on:";
+		string navigationMode = flagship->Commands().Has(Command::LAND) ? T("Landing on:") :
+			object->GetPlanet() && object->GetPlanet()->CanLand(*flagship) ? T("Can land on:") :
+			T("Cannot land on:");
 		info.SetString("navigation mode", navigationMode);
 		const string &name = object->Name();
 		info.SetString("destination", name);
@@ -597,16 +601,16 @@ void Engine::Step(bool isActive)
 	}
 	else if(flagship && flagship->GetTargetSystem())
 	{
-		info.SetString("navigation mode", "Hyperspace:");
+		info.SetString("navigation mode", T("Hyperspace:"));
 		if(player.HasVisited(flagship->GetTargetSystem()))
 			info.SetString("destination", flagship->GetTargetSystem()->Name());
 		else
-			info.SetString("destination", "unexplored system");
+			info.SetString("destination", T("unexplored system"));
 	}
 	else
 	{
-		info.SetString("navigation mode", "Navigation:");
-		info.SetString("destination", "no destination");
+		info.SetString("navigation mode", T("Navigation:"));
+		info.SetString("destination", T("no destination"));
 	}
 	// Use the radar that was just populated. (The draw tick-tock has not
 	// yet been toggled, but it will be at the end of this function.)
@@ -625,14 +629,15 @@ void Engine::Step(bool isActive)
 	if(!target)
 		targetSwizzle = -1;
 	if(!target && !targetAsteroid)
-		info.SetString("target name", "no target");
+		info.SetString("target name", T("no target"));
 	else if(!target)
 	{
 		info.SetSprite("target sprite",
 			targetAsteroid->GetSprite(),
 			targetAsteroid->Facing().Unit(),
 			targetAsteroid->GetFrame(step));
-		info.SetString("target name", Format::Capitalize(targetAsteroid->Name()) + " Asteroid");
+		// TRANSLATORS: minable_name + " Asteroid"
+		info.SetString("target name", Format::Capitalize(targetAsteroid->Name()) + T(" Asteroid"));
 		
 		targetVector = targetAsteroid->Position() - center;
 		
@@ -652,11 +657,11 @@ void Engine::Step(bool isActive)
 		info.SetString("target name", font.TruncateMiddle(target->Name(), 150));
 		info.SetString("target type", target->ModelName());
 		if(!target->GetGovernment())
-			info.SetString("target government", "No Government");
+			info.SetString("target government", T("No Government"));
 		else
 			info.SetString("target government", target->GetGovernment()->GetName());
 		targetSwizzle = target->GetSwizzle();
-		info.SetString("mission target", target->GetPersonality().IsTarget() ? "(mission target)" : "");
+		info.SetString("mission target", target->GetPersonality().IsTarget() ? T("(mission target)") : string(""));
 		
 		int targetType = RadarType(*target, step);
 		info.SetOutlineColor(Radar::GetColor(targetType));
@@ -1040,9 +1045,10 @@ void Engine::EnterSystem()
 	Audio::PlayMusic(system->MusicName());
 	GameData::SetHaze(system->Haze());	
 	
-	Messages::Add("Entering the " + system->Name() + " system on "
-		+ today.ToString() + (system->IsInhabited(flagship) ?
-			"." : ". No inhabited planets detected."));
+	// TRANSLATORS: %1%: system name, %2%: date string, %3%: extra sentence
+	Messages::Add(Format::StringF({T("Entering the %1% system on %2%.%3%"),
+		system->Name(), today.ToString(),
+		(system->IsInhabited(flagship) ? string("") : T(" No inhabited planets detected."))}));
 	
 	// Preload landscapes and determine if the player used a wormhole.
 	const StellarObject *usedWormhole = nullptr;
@@ -1113,8 +1119,9 @@ void Engine::EnterSystem()
 				if(Random::Real() < attraction)
 				{
 					raidFleet->Place(*system, newShips);
-					Messages::Add("Your fleet has attracted the interest of a "
-							+ raidGovernment->GetName() + " raiding party.");
+					// TRANSLATORS: %1%: government name
+					Messages::Add(Format::StringF({T("Your fleet has attracted the interest of a %1% raiding party."),
+						raidGovernment->GetName()}));
 				}
 	}
 	
@@ -1568,12 +1575,12 @@ void Engine::HandleMouseClicks()
 					if(&object == flagship->GetTargetStellar())
 					{
 						if(!planet->CanLand(*flagship))
-							Messages::Add("The authorities on " + planet->Name()
-									+ " refuse to let you land.");
+							Messages::Add(Format::StringF({T("The authorities on %1% refuse to let you land."),
+								planet->Name()}));
 						else
 						{
 							clickCommands |= Command::LAND;
-							Messages::Add("Landing on " + planet->Name() + ".");
+							Messages::Add(Format::StringF({T("Landing on %1%.", "Engine"), planet->Name()}));
 						}
 					}
 					else
@@ -1787,8 +1794,8 @@ void Engine::DoCollection(Flotsam &flotsam)
 		return;
 	
 	// One of your ships picked up this flotsam. Describe who it was.
-	string name = (!collector->GetParent() ? "You" :
-			"Your ship \"" + collector->Name() + "\"") + " picked up ";
+	string name = !collector->GetParent() ? T("You", "pick up") :
+		Format::StringF({T("Your ship \"%1%\"", "pick up"), collector->Name()});
 	// Describe what they collected from this flotsam.
 	string commodity;
 	string message;
@@ -1801,27 +1808,31 @@ void Engine::DoCollection(Flotsam &flotsam)
 			player.Harvest(outfit);
 		}
 		else
-			message = name + to_string(amount) + " "
-				+ (amount == 1 ? outfit->Name() : outfit->PluralName()) + ".";
+			// TRANSLATORS: %1%: you or your ship, %2%: amount, %3% outfit name(s)
+			message = Format::StringF({T("%1% picked up %2% %3%.", "outfit"),
+				name, to_string(amount), outfit->Name(amount)});
 	}
 	else
-		commodity = flotsam.CommodityType();
+		commodity = GameData::DisplayNameOfCommodity(flotsam.CommodityType());
 	
 	// If an ordinary commodity or harvestable was collected, describe it in
 	// terms of tons, not in terms of units.
 	if(!commodity.empty())
 	{
 		double amountInTons = amount * flotsam.UnitSize();
-		message = name + (amountInTons == 1. ? "a ton" : Format::Number(amountInTons) + " tons")
-			+ " of " + Format::LowerCase(commodity) + ".";
+		// TRANSLATORS: %1%: name, %2%: 'a' or amount, %3%: ton(s), %4%: commodity
+		message = Format::StringF({T("%1% picked up %2% %3% of %4%."), name,
+			amountInTons == 1. ? T("a", "collect") : Format::Number(amountInTons),
+			nT("ton", "tons", "collect", amountInTons), Format::LowerCase(commodity)});
 	}
 	
 	// Unless something went wrong while forming the message, display it.
 	if(!message.empty())
 	{
 		int free = collector->Cargo().Free();
-		message += " (" + to_string(free) + (free == 1 ? " ton" : " tons");
-		message += " of free space remaining.)";
+		// TRANSLATORS: %1%: number of free, %2%: ton(s)
+		message += Format::StringF({T(" (%1% %2% of free space remaining.)"),
+			to_string(free), nT("ton", "tons", "room of cargo", free)});
 		Messages::Add(message);
 	}
 }
@@ -1997,8 +2008,8 @@ void Engine::DoGrudge(const shared_ptr<Ship> &target, const Government *attacker
 		if(CanSendHail(previous, player.GetSystem()))
 		{
 			grudge[target->GetGovernment()].reset();
-			SendMessage(previous, "Thank you for your assistance, Captain "
-				+ player.LastName() + "!");
+			SendMessage(previous, Format::StringF({T("Thank you for your assistance, Captain %1%!"),
+				player.LastName()}));
 		}
 		return;
 	}
@@ -2055,19 +2066,19 @@ void Engine::DoGrudge(const shared_ptr<Ship> &target, const Government *attacker
 	string message;
 	if(target->GetPersonality().IsHeroic())
 	{
-		message = "Please assist us in destroying ";
-		message += (attackerCount == 1 ? "this " : "these ");
+		message = T("Please assist us in destroying ");
+		message += nT("this ", "these ", "help1", attackerCount);
 		message += attacker->GetName();
-		message += (attackerCount == 1 ? " ship." : " ships.");
+		message += nT(" ship.", " ships.", "help1", attackerCount);
 	}
 	else
 	{
-		message = "We are under attack by ";
+		message = T("We are under attack by ");
 		if(attackerCount == 1)
-			message += "a ";
+			message += T("a ", "help2");
 		message += attacker->GetName();
-		message += (attackerCount == 1 ? " ship" : " ships");
-		message += ". Please assist us!";
+		message += nT(" ship", " ships", "help2", attackerCount);
+		message += T(". Please assist us!");
 	}
 	SendMessage(target, message);
 }

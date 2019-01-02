@@ -15,6 +15,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DataNode.h"
 #include "GameData.h"
 #include "Government.h"
+#include "LocaleInfo.h"
 #include "Ship.h"
 #include "System.h"
 
@@ -34,6 +35,8 @@ void Person::Load(const DataNode &node)
 		{
 			ships.emplace_back(new Ship);
 			ships.back()->Load(child);
+			if(node.Size() >= 2)
+				ships.back()->SetName(LocaleInfo::TranslateData(node.Token(1), "person"));
 		}
 		else if(child.Token(0) == "government" && child.Size() >= 2)
 			government = GameData::Governments().Get(child.Token(1));

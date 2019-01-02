@@ -18,6 +18,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "GameData.h"
 #include "Information.h"
 #include "Interface.h"
+#include "LocaleInfo.h"
 #include "PlayerInfo.h"
 #include "Point.h"
 #include "Table.h"
@@ -26,6 +27,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <string>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	// Dimensions of the table.
@@ -33,7 +35,7 @@ namespace {
 	const int MAX_X = 190;
 	
 	// Column headings.
-	const string HEADING[6] = {"Type", "Principal", "Interest", "Term", "Payment", ""};
+	const T_ HEADING[6] = {T_("Type"), T_("Principal"), T_("Interest"), T_("Term"), T_("Payment"), T_("", "BankPanel HEADING")};
 	// X coordinates of the columns of the table.
 	const int COLUMN[5] = {-290, -180, -100, -30, 20};
 	const int EXTRA_X = 100;
@@ -137,7 +139,7 @@ void BankPanel::Draw()
 		bool isLastRow = (row == mortgageRows - 1);
 		if(isLastRow && mergedMortgages)
 		{
-			table.Draw("Other");
+			table.Draw(T("Other", "BankPanel"));
 			table.Draw(otherPrincipal);
 			// Skip the interest and term, because this entry represents the
 			// combination of several different mortages.
@@ -146,7 +148,7 @@ void BankPanel::Draw()
 		}
 		else
 		{
-			table.Draw(mortgage.Type());
+			table.Draw(mortgage.TypeName());
 			table.Draw(mortgage.Principal());
 			table.Draw(mortgage.Interest());
 			table.Draw(mortgage.Term());
@@ -157,7 +159,7 @@ void BankPanel::Draw()
 			otherPrincipal -= mortgage.Principal();
 			otherPayment -= mortgage.Payment();
 		}
-		table.Draw("[pay extra]");
+		table.Draw(T("[pay extra]"));
 		++row;
 		
 		// Bail out if this was the last row we had space to draw.
@@ -171,12 +173,12 @@ void BankPanel::Draw()
 		// Include salaries in the total daily payment.
 		totalPayment += salaries;
 		
-		table.Draw("Crew Salaries");
+		table.Draw(T("Crew Salaries"));
 		// Check whether the player owes back salaries.
 		if(player.Accounts().SalariesOwed())
 		{
 			table.Draw(Format::Credits(player.Accounts().SalariesOwed()));
-			table.Draw("(overdue)");
+			table.Draw(T("(overdue)"));
 			table.Advance(1);
 		}
 		else
@@ -189,7 +191,8 @@ void BankPanel::Draw()
 		// Your daily income offsets expenses.
 		totalPayment -= income[0] + income[1];
 		
-		static const string LABEL[] = {"", "Your Salary Income", "Your Tribute Income", "Your Salary and Tribute Income"};
+		static const T_ LABEL[] = {T_("", "BankPanel LABEL"), T_("Your Salary Income"), T_("Your Tribute Income"),
+			T_("Your Salary and Tribute Income")};
 		table.Draw(LABEL[(income[0] != 0) + 2 * (income[1] != 0)]);
 		// For crew salaries, only the "payment" field needs to be shown.
 		table.Advance(3);
@@ -199,29 +202,29 @@ void BankPanel::Draw()
 	
 	// Draw the total daily payment.
 	table.Advance(3);
-	table.Draw("total:", selected);
+	table.Draw(T("total:"), selected);
 	table.Draw(totalPayment, unselected);
 	table.Advance();
 	
 	// Draw the credit score.
 	table.DrawAt(Point(0., FIRST_Y + 210.));
-	string credit = "Your credit score is " + to_string(player.Accounts().CreditScore()) + ".";
+	string credit = Format::StringF({T("Your credit score is %1%."), to_string(player.Accounts().CreditScore())});
 	table.Draw(credit);
 	table.Advance(5);
 	
 	// Report whether the player qualifies for a new loan.
 	string amount;
 	if(!qualify)
-		amount = "You do not qualify for further loans at this time.";
+		amount = T("You do not qualify for further loans at this time.");
 	else
-		amount = "You qualify for a new loan of up to " + Format::Credits(qualify) + " credits.";
+		amount = Format::StringF({T("You qualify for a new loan of up to %1% credits."), Format::Credits(qualify)});
 	if(qualify && selectedRow >= mortgageRows)
 		table.DrawHighlight(back);
 	table.Draw(amount, unselected);
 	if(qualify)
 	{
 		table.Advance(4);
-		table.Draw("[apply]", selected);
+		table.Draw(T("[apply]"), selected);
 	}
 	
 	// Draw the "Pay All" button.
@@ -244,11 +247,11 @@ bool BankPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command)
 		++selectedRow;
 	else if(key == SDLK_RETURN && selectedRow < mortgageRows)
 		GetUI()->Push(new Dialog(this, &BankPanel::PayExtra,
-			"Paying off part of this debt will reduce your daily payments and the "
-			"interest that it costs you. How many extra credits will you pay?"));
+			T("Paying off part of this debt will reduce your daily payments and the "
+			"interest that it costs you. How many extra credits will you pay?")));
 	else if(key == SDLK_RETURN && qualify)
 		GetUI()->Push(new Dialog(this, &BankPanel::NewMortgage,
-			"Borrow how many credits?"));
+			T("Borrow how many credits?")));
 	else if(key == 'a')
 	{
 		// Pay all mortgages, skipping any you cannot afford to pay entirely.

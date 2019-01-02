@@ -20,8 +20,10 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Dialog.h"
 #include "GameData.h"
 #include "FontSet.h"
+#include "Format.h"
 #include "HiringPanel.h"
 #include "Interface.h"
+#include "LocaleInfo.h"
 #include "MapDetailPanel.h"
 #include "MissionPanel.h"
 #include "OutfitterPanel.h"
@@ -35,9 +37,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "TradingPanel.h"
 #include "UI.h"
 
-#include <sstream>
-
 using namespace std;
+using namespace Gettext;
 
 
 
@@ -275,53 +276,52 @@ void PlanetPanel::TakeOffIfReady()
 	
 	if(fighterCount > 0 || droneCount > 0 || cargoToSell > 0 || overbooked > 0)
 	{
-		ostringstream out;
+		string message;
 		if(missionCargoToSell > 0 || overbooked > 0)
 		{
-			bool both = ((cargoToSell > 0 && cargo.MissionCargoSize()) && overbooked > 0);
-			out << "If you take off now you will fail a mission due to not having enough ";
-
+			string reason;
 			if(overbooked > 0)
 			{
-				out << "bunks available for " << overbooked;
-				out << (overbooked > 1 ? " of the passengers" : " passenger");
-				out << (both ? " and not having enough " : ".");
+				// TRANSLATORS: reason#1
+				reason = T("bunks available for ");
+				reason += Format::StringF({nT("1 psssenger", "%1% of the passengers", overbooked),
+					to_string(overbooked)});
 			}
 
 			if(missionCargoToSell > 0)
 			{
-				out << "cargo space to hold " << missionCargoToSell;
-				out << (missionCargoToSell > 1 ? " tons" : " ton");
-				out << " of your mission cargo.";
+				if(!reason.empty())
+					// TRANSLATORS: The separator of reasons.
+					reason += T(" and not having enough ");
+				// TRANSLATORS: reason#2
+				reason += T("cargo space to hold ");
+				reason += Format::StringF({nT("1 ton", "%1% tons", missionCargoToSell),
+					to_string(missionCargoToSell)});
+				reason += T(" of your mission cargo");
 			}
+			// TRANSLATORS: %1%: reason
+			message = Format::StringF({T("If you take off now you will fail a mission due to not having enough %1%."), reason});
 		}
 		else
 		{
-			out << "If you take off now you will have to sell ";
+			message = T("If you take off now you will have to sell ");
 			bool triple = (fighterCount > 0 && droneCount > 0 && cargoToSell > 0);
-
-			if(fighterCount == 1)
-				out << "a fighter";
-			else if(fighterCount > 0)
-				out << fighterCount << " fighters";
+			if(fighterCount > 0)
+				message += Format::StringF({nT("a fighter", "%1% fighters", fighterCount), to_string(fighterCount)});
 			if(fighterCount > 0 && (droneCount > 0 || cargoToSell > 0))
-				out << (triple ? ", " : " and ");
+				message += (triple ? T(", ") : T(" and ", "PlanetPanel1"));
 		
-			if(droneCount == 1)
-				out << "a drone";
-			else if(droneCount > 0)
-				out << droneCount << " drones";
+			if(droneCount > 0)
+				message += Format::StringF({nT("a drone", "%1% drones", droneCount), to_string(droneCount)});
 			if(droneCount > 0 && cargoToSell > 0)
-				out << (triple ? ", and " : " and ");
-
-			if(cargoToSell == 1)
-				out << "a ton of cargo";
-			else if(cargoToSell > 0)
-				out << cargoToSell << " tons of cargo";
-			out << " that you do not have space for.";
+				message += (triple ? T(", and ") : T(" and ", "PlanetPanel2"));
+			
+			if(cargoToSell > 0)
+				message += Format::StringF({nT("a ton of cargo", "%1% tons of cargo", cargoToSell), to_string(cargoToSell)});
+			message += T(" that you do not have space for.");
 		}
-		out << " Are you sure you want to continue?";
-		GetUI()->Push(new Dialog(this, &PlanetPanel::TakeOff, out.str()));
+		message += T(" Are you sure you want to continue?");
+		GetUI()->Push(new Dialog(this, &PlanetPanel::TakeOff, message));
 		return;
 	}
 	

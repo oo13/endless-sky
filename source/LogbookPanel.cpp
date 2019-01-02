@@ -16,7 +16,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FillShader.h"
 #include "Font.h"
 #include "FontSet.h"
+#include "Format.h"
 #include "GameData.h"
+#include "LocaleInfo.h"
 #include "PlayerInfo.h"
 #include "Preferences.h"
 #include "Screen.h"
@@ -29,6 +31,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <set>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	const double SIDEBAR_WIDTH = 100.;
@@ -37,9 +40,12 @@ namespace {
 	const double WIDTH = SIDEBAR_WIDTH + TEXT_WIDTH;
 	const double LINE_HEIGHT = 25.;
 	const double GAP = 30.;
-	const string MONTH[] = {
-		"  January", "  February", "  March", "  April", "  May", "  June",
-		"  July", "  August", "  September", "  October", "  November", "  December"};
+	const T_ MONTH[] = {
+		T_("  January"), T_("  February"), T_("  March"), T_("  April"), T_("  May"), T_("  June"),
+		T_("  July"), T_("  August"), T_("  September"), T_("  October"), T_("  November"), T_("  December")
+	};
+	// TRANSLATORS: %1%: year
+	const T_ yearFormat = T_("%1%");
 }
 
 
@@ -114,7 +120,10 @@ void LogbookPanel::Draw()
 			FillShader::Fill(pos + highlightOffset - Point(1., 0.), highlightSize + Point(0., 2.), lineColor);
 			FillShader::Fill(pos + highlightOffset, highlightSize, backColor);
 		}
-		font.Draw(contents[i], pos + textOffset, dates[i].Month() ? medium : bright);
+		if(dates[i])
+			font.Draw(contents[i], pos + textOffset, medium);
+		else
+			font.Draw(LocaleInfo::TranslateData(contents[i], "log"), pos + textOffset, bright);
 		pos.Y() += LINE_HEIGHT;
 	}
 	
@@ -146,7 +155,7 @@ void LogbookPanel::Draw()
 	{
 		for(const auto &it : pit->second)
 		{
-			font.Draw(it.first, pos + textOffset, bright);
+			font.Draw(LocaleInfo::TranslateData(it.first, "log"), pos + textOffset, bright);
 			pos.Y() += LINE_HEIGHT;
 		
 			wrap.Wrap(it.second);
@@ -285,7 +294,7 @@ void LogbookPanel::Update(bool selectLast)
 	// Generate the table of contents.
 	for(int year : years)
 	{
-		contents.emplace_back(to_string(year));
+		contents.emplace_back(Format::StringF({yearFormat, to_string(year)}));
 		dates.emplace_back(0, 0, year);
 		if(selectedDate && year == selectedDate.Year())
 			for(int month : months)

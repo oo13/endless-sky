@@ -17,12 +17,14 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DataNode.h"
 #include "DataWriter.h"
 #include "Files.h"
+#include "LocaleInfo.h"
 #include "Screen.h"
 
 #include <algorithm>
 #include <map>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	map<string, bool> settings;
@@ -120,7 +122,7 @@ void Preferences::ToggleAmmoUsage()
 
 string Preferences::AmmoUsage()
 {
-	return Has(EXPEND_AMMO) ? Has(FRUGAL_ESCORTS) ? "frugally" : "always" : "never";
+	return Has(EXPEND_AMMO) ? Has(FRUGAL_ESCORTS) ? G("frugally") : G("always") : G("never");
 }
 
 

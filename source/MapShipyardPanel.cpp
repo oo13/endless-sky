@@ -14,6 +14,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "Format.h"
 #include "GameData.h"
+#include "LocaleInfo.h"
 #include "Planet.h"
 #include "PlayerInfo.h"
 #include "Point.h"
@@ -28,6 +29,11 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <set>
 
 using namespace std;
+using namespace Gettext;
+
+namespace {
+	const T_ LABEL[] = {T_("Has no shipyard"), T_("Has shipyard"), T_("Sells this ship")};
+}
 
 
 
@@ -78,11 +84,6 @@ const ItemInfoDisplay &MapShipyardPanel::CompareInfo() const
 
 const string &MapShipyardPanel::KeyLabel(int index) const
 {
-	static const string LABEL[3] = {
-		"Has no shipyard",
-		"Has shipyard",
-		"Sells this ship"
-	};
 	return LABEL[index];
 }
 
@@ -171,10 +172,11 @@ void MapShipyardPanel::DrawItems()
 		
 		for(const Ship *ship : it->second)
 		{
-			string price = Format::Credits(ship->Cost()) + " credits";
+			string price = Format::Credits(ship->Cost()) + T(" credits", "MapShipyardPanel");
 			
-			string info = Format::Number(ship->Attributes().Get("shields")) + " shields / ";
-			info += Format::Number(ship->Attributes().Get("hull")) + " hull";
+			string info = Format::StringF({T("%1% shields / %2% hill"),
+				Format::Number(ship->Attributes().Get("shields")),
+				Format::Number(ship->Attributes().Get("hull"))});
 			
 			bool isForSale = true;
 			if(selectedSystem && player.HasVisited(selectedSystem))

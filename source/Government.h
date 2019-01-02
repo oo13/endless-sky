@@ -44,6 +44,10 @@ public:
 	
 	// Get the name of this government.
 	const std::string &GetName() const;
+	// Get the internal name used for this goverenment. This name is unique and
+	// is never modified by translation, so it can be used in condition
+	// variables, etc.
+	const std::string &GetIdentifier() const;
 	// Get the color swizzle to use for ships of this government.
 	int GetSwizzle() const;
 	// Get the color to use for displaying this government on the map.
@@ -110,6 +114,7 @@ public:
 private:
 	unsigned id;
 	std::string name;
+	std::string displayName;
 	int swizzle = 0;
 	Color color;
 	

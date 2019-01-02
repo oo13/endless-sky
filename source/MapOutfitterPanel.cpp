@@ -14,6 +14,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "Format.h"
 #include "GameData.h"
+#include "LocaleInfo.h"
 #include "Outfit.h"
 #include "Planet.h"
 #include "PlayerInfo.h"
@@ -29,6 +30,12 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <set>
 
 using namespace std;
+using namespace Gettext;
+
+namespace {
+	const T_ MINE = T_("Mine this here");
+	const T_ LABEL[] = {T_("Has no outfitter"), T_("Has outfitter"), T_("Sells this outfit")};
+}
 
 
 
@@ -79,15 +86,9 @@ const ItemInfoDisplay &MapOutfitterPanel::CompareInfo() const
 
 const string &MapOutfitterPanel::KeyLabel(int index) const
 {
-	static const string MINE = "Mine this here";
 	if(index == 2 && selected && selected->Get("installable") < 0)
 		return MINE;
 	
-	static const string LABEL[3] = {
-		"Has no outfitter",
-		"Has outfitter",
-		"Sells this outfit"
-	};
 	return LABEL[index];
 }
 
@@ -184,21 +185,22 @@ void MapOutfitterPanel::DrawItems()
 		
 		for(const Outfit *outfit : it->second)
 		{
-			string price = Format::Credits(outfit->Cost()) + " credits";
+			string price = Format::Credits(outfit->Cost()) + T(" credits", "MapOUtfitterPanel");
 			
 			string info;
 			if(outfit->Get("installable") < 0.)
-				info = "(Mined from asteroids)";
+				info = T("(Mined from asteroids)");
 			else
 			{
 				double space = -outfit->Get("outfit space");
-				info = Format::Number(space) + (abs(space) == 1. ? " ton" : " tons");
+				string kind_of_outfit(T("outfit", "kind of outfit"));
 				if(space && -outfit->Get("weapon capacity") == space)
-					info += " of weapon space";
+					kind_of_outfit = T("weapon", "kind of outfit");
 				else if(space && -outfit->Get("engine capacity") == space)
-					info += " of engine space";
-				else
-					info += " of outfit space";
+					kind_of_outfit = T("engine", "kind of outfit");
+				// TRANSLATORS: %1%: space, %2%: ton(s), %3%: kind of outfit
+				info = Format::StringF({T("%1% %2% of %3% space"), Format::Number(space),
+					nT("ton", "tons", "MapOutfitterPanel", abs(space)), kind_of_outfit});
 			}
 			
 			bool isForSale = true;

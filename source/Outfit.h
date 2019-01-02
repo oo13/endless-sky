@@ -13,6 +13,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #ifndef OUTFIT_H_
 #define OUTFIT_H_
 
+#include "LocaleInfo.h"
 #include "Weapon.h"
 
 #include "Dictionary.h"
@@ -46,8 +47,14 @@ public:
 	// "attributes" node.
 	void Load(const DataNode &node);
 	
-	const std::string &Name() const;
-	const std::string &PluralName() const;
+	// n is amount of them.
+	std::string Name(unsigned long n = 1) const;
+	std::string PluralName() const;
+	// Get the internal name used for this outfit. This name is unique and
+	// is never modified by string translation, so it can be used in condition
+	// variables, etc.
+	const std::string &Identifier() const;
+	
 	const std::string &Category() const;
 	const std::string &Description() const;
 	int64_t Cost() const;

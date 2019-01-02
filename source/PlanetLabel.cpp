@@ -17,6 +17,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FontSet.h"
 #include "Government.h"
 #include "LineShader.h"
+#include "LocaleInfo.h"
 #include "pi.h"
 #include "Planet.h"
 #include "PointerShader.h"
@@ -27,6 +28,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <cmath>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	const double LINE_ANGLE[4] = {60., 120., 300., 240.};
@@ -57,7 +59,7 @@ PlanetLabel::PlanetLabel(const Point &position, const StellarObject &object, con
 	else
 	{
 		color = Color(.3, .3, .3, 1.);
-		government = "(No government)";
+		government = T("(No government)");
 	}
 	double alpha = min(.5, max(0., .6 - (position.Length() - radius) * .001 * zoom));
 	color = Color(color.Get()[0] * alpha, color.Get()[1] * alpha, color.Get()[2] * alpha, 0.);

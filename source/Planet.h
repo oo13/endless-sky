@@ -42,9 +42,11 @@ public:
 	void Load(const DataNode &node, const Set<Sale<Ship>> &ships, const Set<Sale<Outfit>> &outfits);
 	
 	// Get the name of the planet.
-	const std::string &Name() const;
-	// Get the name used for this planet in the data files.
-	const std::string &TrueName() const;
+	std::string Name() const;
+	// Get the internal name used for this planet. This name is unique and is
+	// never modified by translation, so it can be used in condition
+	// variables, etc.
+	const std::string &Identifier() const;
 	// Get the planet's descriptive text.
 	const std::string &Description() const;
 	// Get the landscape sprite.
@@ -56,7 +58,8 @@ public:
 	const std::set<std::string> &Attributes() const;
 	
 	// Get planet's noun descriptor from attributes
-	const std::string &Noun() const;
+	// This function may return a translated text.
+	std::string Noun() const;
 	
 	// Check whether there is a spaceport (which implies there is also trading,
 	// jobs, banking, and hiring).
@@ -124,6 +127,7 @@ public:
 	
 private:
 	std::string name;
+	std::string displayName;
 	std::string description;
 	std::string spaceport;
 	const Sprite *landscape = nullptr;

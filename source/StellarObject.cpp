@@ -14,6 +14,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "GameData.h"
 #include "Government.h"
+#include "LocaleInfo.h"
 #include "Planet.h"
 #include "Politics.h"
 #include "Radar.h"
@@ -21,6 +22,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <algorithm>
 
 using namespace std;
+using namespace Gettext;
 
 
 
@@ -65,10 +67,10 @@ const Planet *StellarObject::GetPlanet() const
 
 
 // Only planets that you can land on have names.
-const string &StellarObject::Name() const
+string StellarObject::Name() const
 {
-	static const string UNKNOWN = "???";
-	return (planet && !planet->Name().empty()) ? planet->Name() : UNKNOWN;
+	static const T_ UNKNOWN = T_("???", "StellarObject");
+	return (planet && !planet->Name().empty()) ? planet->Name() : UNKNOWN.Str();
 }
 
 

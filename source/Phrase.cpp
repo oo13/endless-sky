@@ -14,7 +14,10 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "DataNode.h"
 #include "GameData.h"
+#include "LocaleInfo.h"
 #include "Random.h"
+
+#include <regex>
 
 using namespace std;
 
@@ -24,9 +27,11 @@ void Phrase::Load(const DataNode &node)
 {
 	// Set the name of this phrase, so we know it has been loaded.
 	name = node.Size() >= 2 ? node.Token(1) : "Unnamed Phrase";
+	// Translate all nodes.
+	const DataNode tnode = LocaleInfo::TranslateNode(node);
 	
 	parts.emplace_back();
-	for(const DataNode &child : node)
+	for(const DataNode &child : tnode)
 	{
 		parts.back().emplace_back();
 		Part &part = parts.back().back();
@@ -47,11 +52,31 @@ void Phrase::Load(const DataNode &node)
 					part.phrases.push_back(subphrase);
 			}
 		}
+		else if(child.Token(0) == "replace")
+		{
+			for(const DataNode &grand : child)
+			{
+				try
+				{
+					const regex e(grand.Token(0));
+					const string fmt = grand.Size() >= 2 ? grand.Token(1) : "";
+					regex_constants::match_flag_type flags = regex_constants::format_first_only;
+					if(grand.Size() >= 3 && grand.Token(2).find("g") != string::npos)
+						flags = regex_constants::match_default;
+					auto f = [e, fmt, flags](const string &s) -> string { return regex_replace(s, e, fmt, flags); };
+					part.replaceRules.push_back(f);
+				}
+				catch (regex_error &e)
+				{
+					grand.PrintTrace("Regex error:");
+				}
+			}
+		}
 		else
 			child.PrintTrace("Skipping unrecognized attribute:");
 		
-		// If no words or phrases were given, discard this part of the phrase.
-		if(part.words.empty() && part.phrases.empty())
+		// If no words or phrases or replace rules were given, discard this part of the phrase.
+		if(part.words.empty() && part.phrases.empty() && part.replaceRules.empty())
 			parts.back().pop_back();
 	}
 }
@@ -77,6 +102,9 @@ string Phrase::Get() const
 			result += part.phrases[Random::Int(part.phrases.size())]->Get();
 		else if(!part.words.empty())
 			result += part.words[Random::Int(part.words.size())];
+		else if(!part.replaceRules.empty())
+			for(auto f : part.replaceRules)
+				result = f(result);
 	}
 	
 	return result;

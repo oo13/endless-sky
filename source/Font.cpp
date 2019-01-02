@@ -17,12 +17,14 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "GameData.h"
 #include "Files.h"
 #include "FreeTypeGlyphs.h"
+#include "LocaleInfo.h"
 #include "Point.h"
 
 #include <algorithm>
 #include <cmath>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	bool showUnderlines = false;
@@ -65,6 +67,10 @@ namespace {
 		// not unicode - 11111??? 10?????? 10?????? 10??????
 		return -1;
 	}
+	
+	// The ellipsis character.
+	const T_ ellipsisCharacter = T_("...");
+	const string nonEllipsis = "";
 }
 
 
@@ -88,10 +94,13 @@ bool Font::Load(const DataNode &node)
 		return false;
 	}
 	
+	// Localization.
+	const DataNode tnode = LocaleInfo::TranslateNode(node);
+	
 	// Get size and height.
 	size = 0;
 	heightOverride = 0;
-	for(const DataNode &child : node)
+	for(const DataNode &child : tnode)
 	{
 		if(child.Token(0) == "height override")
 			heightOverride = round(child.Value(1));
@@ -112,13 +121,13 @@ bool Font::Load(const DataNode &node)
 	}
 	if(!size)
 	{
-		node.PrintTrace("Must have one font size:");
+		tnode.PrintTrace("Must have one font size:");
 		return false;
 	}
 	
 	// Get glyph source.
 	sources.clear();
-	for(const DataNode &child : node)
+	for(const DataNode &child : tnode)
 	{
 		const string &key = child.Token(0);
 		if(key != "atlas" && key != "freetype")
@@ -164,7 +173,7 @@ bool Font::Load(const DataNode &node)
 	}
 	if(sources.empty())
 	{
-		node.PrintTrace("Must have at least one glyph source (atlas or freetype):");
+		tnode.PrintTrace("Must have at least one glyph source (atlas or freetype):");
 		return false;
 	}
 	
@@ -246,7 +255,7 @@ string Font::Truncate(const string &str, int width, bool ellipsis) const
 		return str;
 	
 	if(ellipsis)
-		width -= Width("...");
+		width -= Width(ellipsisCharacter);
 	
 	// Find the last index that fits the width. [good,bad[
 	size_t len = str.length();
@@ -271,7 +280,7 @@ string Font::Truncate(const string &str, int width, bool ellipsis) const
 		prev = next;
 		prevWidth = nextWidth;
 	}
-	return str.substr(0, good) + (ellipsis ? "..." : "");
+	return str.substr(0, good) + (ellipsis ? ellipsisCharacter : nonEllipsis);
 }
 
 
@@ -283,7 +292,7 @@ string Font::TruncateFront(const string &str, int width, bool ellipsis) const
 		return str;
 	
 	if(ellipsis)
-		width -= Width("...");
+		width -= Width(ellipsisCharacter);
 	
 	// Find the first index that fits the width. ]bad,good]
 	size_t len = str.length();
@@ -308,7 +317,7 @@ string Font::TruncateFront(const string &str, int width, bool ellipsis) const
 		prev = next;
 		prevWidth = nextWidth;
 	}
-	return (ellipsis ? "..." : "") + str.substr(good);
+	return (ellipsis ? ellipsisCharacter : nonEllipsis) + str.substr(good);
 }
 
 
@@ -319,12 +328,12 @@ string Font::TruncateMiddle(const string &str, int width, bool ellipsis) const
 		return str;
 	
 	if(ellipsis)
-		width -= Width("...");
+		width -= Width(ellipsisCharacter);
 	
 	string right = TruncateFront(str, width / 2, false);
 	width -= Width(right);
 	string left = Truncate(str, width, false);
-	return left + (ellipsis ? "..." : "") + right;
+	return left + (ellipsis ? ellipsisCharacter : nonEllipsis) + right;
 }
 
 

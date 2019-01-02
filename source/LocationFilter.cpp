@@ -161,7 +161,7 @@ void LocationFilter::Save(DataWriter &out) const
 			out.BeginChild();
 			{
 				for(const Planet *planet : planets)
-					out.Write(planet->Name());
+					out.Write(planet->Identifier());
 			}
 			out.EndChild();
 		}
@@ -171,7 +171,7 @@ void LocationFilter::Save(DataWriter &out) const
 			out.BeginChild();
 			{
 				for(const System *system : systems)
-					out.Write(system->Name());
+					out.Write(system->Identifier());
 			}
 			out.EndChild();
 		}
@@ -181,7 +181,7 @@ void LocationFilter::Save(DataWriter &out) const
 			out.BeginChild();
 			{
 				for(const Government *government : governments)
-					out.Write(government->GetName());
+					out.Write(government->GetIdentifier());
 			}
 			out.EndChild();
 		}
@@ -201,8 +201,8 @@ void LocationFilter::Save(DataWriter &out) const
 			out.BeginChild();
 			{
 				for(const Outfit *outfit : it)
-					if(!outfit->Name().empty())
-						out.Write(outfit->Name());
+					if(!outfit->Identifier().empty())
+						out.Write(outfit->Identifier());
 			}
 			out.EndChild();
 		}
@@ -217,7 +217,7 @@ void LocationFilter::Save(DataWriter &out) const
 			out.EndChild();
 		}
 		if(center)
-			out.Write("near", center->Name(), centerMinDistance, centerMaxDistance);
+			out.Write("near", center->Identifier(), centerMinDistance, centerMaxDistance);
 	}
 	out.EndChild();
 }
@@ -370,7 +370,7 @@ const System *LocationFilter::PickSystem(const System *origin) const
 	for(const auto &it : GameData::Systems())
 	{
 		// Skip entries with incomplete data.
-		if(it.second.Name().empty())
+		if(it.second.Identifier().empty())
 			continue;
 		if(Matches(&it.second, origin))
 			options.push_back(&it.second);
@@ -389,7 +389,7 @@ const Planet *LocationFilter::PickPlanet(const System *origin, bool hasClearance
 	{
 		const Planet &planet = it.second;
 		// Skip entries with incomplete data.
-		if(planet.Name().empty() || !planet.GetSystem())
+		if(planet.Identifier().empty() || !planet.GetSystem())
 			continue;
 		// Skip planets that do not offer jobs or missions.
 		if(planet.IsWormhole() || !planet.HasSpaceport() || (!hasClearance && !planet.CanLand()))

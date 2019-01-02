@@ -19,10 +19,12 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FillShader.h"
 #include "Font.h"
 #include "FontSet.h"
+#include "Format.h"
 #include "GameData.h"
 #include "Information.h"
 #include "Interface.h"
 #include "LineShader.h"
+#include "LocaleInfo.h"
 #include "Mission.h"
 #include "Planet.h"
 #include "PlayerInfo.h"
@@ -41,6 +43,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <sstream>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	const int SIDE_WIDTH = 280;
@@ -170,13 +173,13 @@ void MissionPanel::Draw()
 	DrawSelectedSystem();
 	Point pos = DrawPanel(
 		Screen::TopLeft() + Point(0., -availableScroll),
-		"Missions available here:",
+		T("Missions available here:"),
 		available.size());
 	DrawList(available, pos);
 	
 	pos = DrawPanel(
 		Screen::TopRight() + Point(-SIDE_WIDTH, -acceptedScroll),
-		"Your current missions:",
+		T("Your current missions:"),
 		AcceptedVisible());
 	DrawList(accepted, pos);
 	
@@ -209,7 +212,7 @@ bool MissionPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command)
 	{
 		if(acceptedIt != accepted.end() && acceptedIt->IsVisible())
 			GetUI()->Push(new Dialog(this, &MissionPanel::AbortMission,
-				"Abort mission \"" + acceptedIt->Name() + "\"?"));
+				Format::StringF({T("Abort mission \"%1%\"?"), acceptedIt->Name()})));
 		return true;
 	}
 	else if(key == SDLK_LEFT && availableIt == available.end())
@@ -456,12 +459,12 @@ void MissionPanel::DrawKey() const
 		*colors.Get("blocked mission"),
 		*colors.Get("waypoint")
 	};
-	static const string LABEL[ROWS] = {
-		"Available job; can accept",
-		"Too little space to accept",
-		"Active job; go here to complete",
-		"Has unfinished requirements",
-		"Waypoint you must visit"
+	static const T_ LABEL[ROWS] = {
+		T_("Available job; can accept"),
+		T_("Too little space to accept"),
+		T_("Active job; go here to complete"),
+		T_("Has unfinished requirements"),
+		T_("Waypoint you must visit")
 	};
 	int selected = -1;
 	if(availableIt != available.end())
@@ -487,11 +490,11 @@ void MissionPanel::DrawSelectedSystem() const
 	
 	string text;
 	if(!selectedSystem)
-		text = "Selected system: none";
+		text = T("Selected system: none");
 	else if(!player.KnowsName(selectedSystem))
-		text = "Selected system: unexplored system";
+		text = T("Selected system: unexplored system");
 	else
-		text = "Selected system: " + selectedSystem->Name();
+		text = Format::StringF({T("Selected system: %1%"), selectedSystem->Name()});
 	
 	int jumps = 0;
 	const vector<const System *> &plan = player.TravelPlan();
@@ -500,11 +503,8 @@ void MissionPanel::DrawSelectedSystem() const
 		jumps = plan.end() - it;
 	else if(distance.HasRoute(selectedSystem))
 		jumps = distance.Days(selectedSystem);
-	
-	if(jumps == 1)
-		text += " (1 jump away)";
-	else if(jumps > 0)
-		text += " (" + to_string(jumps) + " jumps away)";
+
+	text += Format::StringF({nT(" (1 jump away)", " (%1% jumps away)", jumps), to_string(jumps)});
 	
 	const Font &font = FontSet::Get(14);
 	Point pos(-.5 * font.Width(text), Screen::Top() + .5 * (30. - font.Height()));
@@ -627,8 +627,8 @@ void MissionPanel::DrawMissionInfo()
 	else if(acceptedIt != accepted.end())
 		info.SetCondition("can abort");
 	
-	info.SetString("cargo free", to_string(player.Cargo().Free()) + " tons");
-	info.SetString("bunks free", to_string(player.Cargo().BunksFree()) + " bunks");
+	info.SetString("cargo free", Format::StringF({T("%1% tons"), to_string(player.Cargo().Free())}));
+	info.SetString("bunks free", Format::StringF({T("%1% bunks"), to_string(player.Cargo().BunksFree())}));
 	
 	info.SetString("today", player.GetDate().ToString());
 	
@@ -668,17 +668,18 @@ void MissionPanel::Accept()
 		crewToFire = toAccept.Passengers() - player.Cargo().BunksFree();
 	if(cargoToSell > 0 || crewToFire > 0)
 	{
-		ostringstream out;
+		string message;
 		if(cargoToSell > 0 && crewToFire > 0)
-			out << "You must fire " << crewToFire << " of your flagship's non-essential crew members and sell "
-				<< cargoToSell << " tons of ordinary commodities to make room for this mission. Continue?";
+			message = Format::StringF({T("You must fire %1% of your flagship's non-essential crew members "
+				"and sell %2% tons of ordinary commodities to make room for this mission. Continue?"),
+				to_string(crewToFire), to_string(cargoToSell)});
 		else if(crewToFire > 0)
-			out << "You must fire " << crewToFire
-				<< " of your flagship's non-essential crew members to make room for this mission. Continue?";
+			message = Format::StringF({T("You must fire %1% of your flagship's non-essential crew members "
+				"to make room for this mission. Continue?"), to_string(crewToFire)});
 		else
-			out << "You must sell " << cargoToSell
-				<< " tons of ordinary commodities to make room for this mission. Continue?";
-		GetUI()->Push(new Dialog(this, &MissionPanel::MakeSpaceAndAccept, out.str()));
+			message = Format::StringF({T("You must sell %1% tons of ordinary commodities "
+				"to make room for this mission. Continue?"), to_string(cargoToSell)});
+		GetUI()->Push(new Dialog(this, &MissionPanel::MakeSpaceAndAccept, message));
 		return;
 	}
 	

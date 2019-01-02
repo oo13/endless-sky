@@ -16,6 +16,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Effect.h"
 #include "Flotsam.h"
 #include "GameData.h"
+#include "LocaleInfo.h"
 #include "Mask.h"
 #include "Outfit.h"
 #include "pi.h"
@@ -36,7 +37,10 @@ void Minable::Load(const DataNode &node)
 {
 	// Set the name of this minable, so we know it has been loaded.
 	if(node.Size() >= 2)
+	{
 		name = node.Token(1);
+		displayName = LocaleInfo::TranslateData(name, "minable");
+	}
 	
 	for(const DataNode &child : node)
 	{
@@ -62,6 +66,13 @@ void Minable::Load(const DataNode &node)
 
 
 const string &Minable::Name() const
+{
+	return displayName;
+}
+
+
+
+const string &Minable::Identifier() const
 {
 	return name;
 }

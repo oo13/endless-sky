@@ -27,6 +27,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 class DataNode;
 class DataWriter;
+class LocaleInfo;
 class Planet;
 class PlayerInfo;
 class Ship;

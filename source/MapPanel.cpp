@@ -25,6 +25,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Information.h"
 #include "Interface.h"
 #include "LineShader.h"
+#include "LocaleInfo.h"
 #include "MapDetailPanel.h"
 #include "MapOutfitterPanel.h"
 #include "MapShipyardPanel.h"
@@ -52,6 +53,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <limits>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	// Log how many player ships are in a given system, tracking if they are parked or in-flight.
@@ -170,8 +172,8 @@ void MapPanel::Draw()
 	
 	if(!distance.HasRoute(selectedSystem))
 	{
-		static const string UNAVAILABLE = "You have no available route to this system.";
-		static const string UNKNOWN = "You have not yet mapped a route to this system.";
+		static const T_ UNAVAILABLE = T_("You have no available route to this system.");
+		static const T_ UNKNOWN = T_("You have not yet mapped a route to this system.");
 		const Font &font = FontSet::Get(18);
 		
 		const string &message = player.HasVisited(selectedSystem) ? UNAVAILABLE : UNKNOWN;
@@ -218,11 +220,11 @@ void MapPanel::DrawMiniMap(const PlayerInfo &player, double alpha, const System 
 	const Ship *flagship = player.Flagship();
 	for(int i = 0; i < 2; ++i)
 	{
-		static const string UNKNOWN_SYSTEM = "Unexplored System";
+		static const T_ UNKNOWN_SYSTEM = T_("Unexplored System", "MapPanel");
 		const System *system = jump[i];
 		const Government *gov = system->GetGovernment();
 		Point from = system->Position() - center + drawPos;
-		const string &name = player.KnowsName(system) ? system->Name() : UNKNOWN_SYSTEM;
+		const string &name = player.KnowsName(system) ? system->Name() : UNKNOWN_SYSTEM.Str();
 		font.Draw(name, from + Point(OUTER, -.5 * font.Height()), lineColor);
 		
 		// Draw the origin and destination systems, since they
@@ -345,7 +347,7 @@ bool MapPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command)
 	else if(key == 'f')
 	{
 		GetUI()->Push(new Dialog(
-			this, &MapPanel::Find, "Search for:"));
+			this, &MapPanel::Find, T("Search for:", "MapPanel")));
 		return true;
 	}
 	else if(key == '+' || key == '=')
@@ -679,7 +681,7 @@ void MapPanel::UpdateCache()
 		const System &system = it.second;
 		// Referring to a non-existent system in a mission can create a spurious
 		// system record. Ignore those.
-		if(system.Name().empty())
+		if(system.Identifier().empty())
 			continue;
 		if(!player.HasSeen(&system) && &system != specialSystem)
 			continue;
@@ -1105,23 +1107,31 @@ void MapPanel::DrawTooltips()
 	if(tooltip.empty())
 	{
 		pair<int, int> t = escortSystems.at(hoverSystem);
+		// TRANSLATORS: %1%: Descriptions of escorts.
+		string tooltipBase = T("%1%", "MapPanel");
 		if(hoverSystem == playerSystem)
 		{
 			--t.first;
 			if(t.first || t.second)
-				tooltip = "You are here, with:\n";
+				// TRANSLATORS: %1%: Descriptions of escorts.
+				tooltipBase = T("You are here, with:\n%1%");
 			else
-				tooltip = "You are here.";
+				tooltipBase = T("You are here.");
 		}
 		// If you have both active and parked escorts, call the active ones
 		// "active escorts." Otherwise, just call them "escorts."
+		string tooltipEscort;
 		if(t.first && t.second)
-			tooltip += to_string(t.first) + (t.first == 1 ? " active escort\n" : " active escorts\n");
+			// TRANSLATORS: %1%: Number of ships, %2%: a type of escort(s)
+			tooltipEscort += Format::StringF({T("%1% %2%\n", "MapPanel"), to_string(t.first), nT("active escort", "active escorts", t.first)});
 		else if(t.first)
-			tooltip += to_string(t.first) + (t.first == 1 ? " escort" : " escorts");
+			// TRANSLATORS: %1%: Number of ships, %2%: a type of escort(s)
+			tooltipEscort += Format::StringF({T("%1% %2%\n", "MapPanel"), to_string(t.first), nT("escort", "escorts", t.first)});
 		if(t.second)
-			tooltip += to_string(t.second) + (t.second == 1 ? " parked escort" : " parked escorts");
+			// TRANSLATORS: %1%: Number of ships, %2%: a type of escort(s)
+			tooltipEscort += Format::StringF({T("%1% %2%\n", "MapPanel"), to_string(t.second), nT("parked escort", "parked escorts", t.second)});
 		
+		tooltip = Format::StringF({tooltipBase, tooltipEscort});
 		hoverText.Wrap(tooltip);
 	}
 	if(!tooltip.empty())

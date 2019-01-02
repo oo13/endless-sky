@@ -56,6 +56,8 @@ public:
 	// The type is "Mortgage" if this is a mortgage you applied for from a bank,
 	// and "Fine" if this is a fine imposed on you for illegal activities.
 	const std::string &Type() const;
+	// The TypeName() is equivallent Type(), but this function can return a translated text.
+	const std::string &TypeName() const;
 	// Get the remaining mortgage principal.
 	int64_t Principal() const;
 	// Get the interest rate. It is formatted as a string, because all that the
@@ -70,6 +72,7 @@ public:
 private:
 	// Note: once a mortgage is set up, only the principal and term will change.
 	std::string type;
+	mutable std::string typeName;
 	int64_t principal;
 	double interest;
 	std::string interestString;

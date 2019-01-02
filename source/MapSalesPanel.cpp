@@ -20,6 +20,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "GameData.h"
 #include "Government.h"
 #include "ItemInfoDisplay.h"
+#include "LocaleInfo.h"
 #include "Outfit.h"
 #include "PlayerInfo.h"
 #include "Point.h"
@@ -38,6 +39,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <algorithm>
 
 using namespace std;
+using namespace Gettext;
 
 const double MapSalesPanel::ICON_HEIGHT = 90.;
 const double MapSalesPanel::PAD = 8.;
@@ -111,7 +113,7 @@ bool MapSalesPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command)
 	}
 	else if(key == 'f')
 		GetUI()->Push(new Dialog(
-			this, &MapSalesPanel::DoFind, "Search for:"));
+			this, &MapSalesPanel::DoFind, T("Search for:", "MapSalesPanel")));
 	else
 		return MapPanel::KeyDown(key, mod, command);
 	
@@ -316,7 +318,7 @@ bool MapSalesPanel::DrawHeader(Point &corner, const string &category)
 	
 	const Color &textColor = *GameData::Colors().Get(hide ? "medium" : "bright");
 	const Font &bigFont = FontSet::Get(18);
-	bigFont.Draw(category, corner + Point(30., 15.), textColor);
+	bigFont.Draw(LocaleInfo::TranslateCore(category), corner + Point(30., 15.), textColor);
 	AddZone(Rectangle::FromCorner(corner, Point(WIDTH, 40.)), [this, category](){ ClickCategory(category); });
 	corner.Y() += 40.;
 	

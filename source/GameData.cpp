@@ -32,6 +32,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "ImageSet.h"
 #include "Interface.h"
 #include "LineShader.h"
+#include "LocaleInfo.h"
 #include "Minable.h"
 #include "Mission.h"
 #include "Music.h"
@@ -65,6 +66,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 class Sprite;
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	Set<Color> colors;
@@ -172,6 +174,10 @@ bool GameData::BeginLoad(const char * const *argv)
 	// Generate a catalog of music files.
 	Music::Init(sources);
 	
+	// Bind all textdomain.
+	LocaleInfo::SetLocale();
+	LocaleInfo::Init(sources);
+	
 	for(const string &source : sources)
 	{
 		// Iterate through the paths starting with the last directory given. That
@@ -228,28 +234,28 @@ void GameData::CheckReferences()
 		if(!it.second.GetGovernment())
 			Files::LogError("Warning: fleet \"" + it.first + "\" is referred to, but never defined.");
 	for(const auto &it : governments)
-		if(it.second.GetName().empty())
+		if(it.second.GetIdentifier().empty())
 			Files::LogError("Warning: government \"" + it.first + "\" is referred to, but never defined.");
 	for(const auto &it : minables)
-		if(it.second.Name().empty())
+		if(it.second.Identifier().empty())
 			Files::LogError("Warning: minable \"" + it.first + "\" is referred to, but never defined.");
 	for(const auto &it : missions)
 		if(it.second.Name().empty())
 			Files::LogError("Warning: mission \"" + it.first + "\" is referred to, but never defined.");
 	for(const auto &it : outfits)
-		if(it.second.Name().empty())
+		if(it.second.Identifier().empty())
 			Files::LogError("Warning: outfit \"" + it.first + "\" is referred to, but never defined.");
 	for(const auto &it : phrases)
 		if(it.second.Name().empty())
 			Files::LogError("Warning: phrase \"" + it.first + "\" is referred to, but never defined.");
 	for(const auto &it : planets)
-		if(it.second.Name().empty())
+		if(it.second.Identifier().empty())
 			Files::LogError("Warning: planet \"" + it.first + "\" is referred to, but never defined.");
 	for(const auto &it : ships)
-		if(it.second.ModelName().empty())
+		if(it.second.ModelIdentifier().empty())
 			Files::LogError("Warning: ship \"" + it.first + "\" is referred to, but never defined.");
 	for(const auto &it : systems)
-		if(it.second.Name().empty())
+		if(it.second.Identifier().empty())
 			Files::LogError("Warning: system \"" + it.first + "\" is referred to, but never defined.");
 }
 
@@ -418,7 +424,7 @@ void GameData::WriteEconomy(DataWriter &out)
 			out.BeginChild();
 			for(const auto &pit : purchases)
 				for(const auto &cit : pit.second)
-					out.Write(pit.first->Name(), cit.first, cit.second);
+					out.Write(pit.first->Identifier(), cit.first, cit.second);
 			out.EndChild();
 		}
 		out.WriteToken("system");
@@ -429,10 +435,10 @@ void GameData::WriteEconomy(DataWriter &out)
 		for(const auto &sit : GameData::Systems())
 		{
 			// Skip systems that have no name.
-			if(sit.first.empty() || sit.second.Name().empty())
+			if(sit.first.empty() || sit.second.Identifier().empty())
 				continue;
 			
-			out.WriteToken(sit.second.Name());
+			out.WriteToken(sit.second.Identifier());
 			for(const auto &cit : GameData::Commodities())
 				out.WriteToken(static_cast<int>(sit.second.Supply(cit.name)));
 			out.Write();
@@ -698,6 +704,19 @@ const vector<Trade::Commodity> &GameData::SpecialCommodities()
 
 
 
+const std::string &GameData::DisplayNameOfCommodity(const std::string &name)
+{
+	for(const auto &it : trade.Commodities())
+		if(it.name == name)
+			return it.displayName;
+	for(const auto &it : trade.SpecialCommodities())
+		if(it.name == name)
+			return it.displayName;
+	return name;
+}
+
+
+
 // Custom messages to be shown when trying to land on certain stellar objects.
 bool GameData::HasLandingMessage(const Sprite *sprite)
 {
@@ -779,10 +798,14 @@ const string &GameData::Tooltip(const string &label)
 	static const string EMPTY;
 	auto it = tooltips.find(label);
 	// Special case: the "cost" and "sells for" labels include the percentage of
-	// the full price, so they will not match exactly.
-	if(it == tooltips.end() && !label.compare(0, 4, "cost"))
+	// the full price, so they will not match exactly, and it may be translated.
+	// TRANSLATORS: "cost" is the begin of T("cost (%1%%):") in the context "ItemInfoDisplay."
+	const string costT = T("cost");
+	if(it == tooltips.end() && !label.compare(0, costT.length(), costT))
 		it = tooltips.find("cost:");
-	if(it == tooltips.end() && !label.compare(0, 9, "sells for"))
+	// TRANSLATORS: "sells for" is the begin of T("sells for (%1%%):") in the context "ItemInfoDisplay."
+	const string sellsForT = T("sells for");
+	if(it == tooltips.end() && !label.compare(0, sellsForT.length(), sellsForT))
 		it = tooltips.find("sells for:");
 	return (it == tooltips.end() ? EMPTY : it->second);
 }
@@ -820,14 +843,16 @@ void GameData::LoadSources()
 	vector<string> globalPlugins = Files::ListDirectories(Files::Resources() + "plugins/");
 	for(const string &path : globalPlugins)
 	{
-		if(Files::Exists(path + "data") || Files::Exists(path + "images") || Files::Exists(path + "sounds"))
+		if(Files::Exists(path + "data") || Files::Exists(path + "images") || Files::Exists(path + "sounds")
+			|| Files::Exists(path + "locales"))
 			sources.push_back(path);
 	}
 	
 	vector<string> localPlugins = Files::ListDirectories(Files::Config() + "plugins/");
 	for(const string &path : localPlugins)
 	{
-		if(Files::Exists(path + "data") || Files::Exists(path + "images") || Files::Exists(path + "sounds"))
+		if(Files::Exists(path + "data") || Files::Exists(path + "images") || Files::Exists(path + "sounds")
+			|| Files::Exists(path + "locales"))
 			sources.push_back(path);
 	}
 	
@@ -924,7 +949,10 @@ void GameData::LoadFile(const string &path, bool debugMode)
 		else if(key == "landing message" && node.Size() >= 2)
 		{
 			for(const DataNode &child : node)
-				landingMessages[SpriteSet::Get(child.Token(0))] = node.Token(1);
+			{
+				const string &msg = LocaleInfo::TranslateData(node.Token(1));
+				landingMessages[SpriteSet::Get(child.Token(0))] = msg;
+			}
 		}
 		else if(key == "star" && node.Size() >= 2)
 		{
@@ -946,7 +974,7 @@ void GameData::LoadFile(const string &path, bool debugMode)
 			vector<string> &list = ratings[node.Token(1)];
 			list.clear();
 			for(const DataNode &child : node)
-				list.push_back(child.Token(0));
+				list.push_back(LocaleInfo::TranslateData(child.Token(0), "rating"));
 		}
 		else if((key == "tip" || key == "help") && node.Size() >= 2)
 		{
@@ -960,7 +988,7 @@ void GameData::LoadFile(const string &path, bool debugMode)
 					if(child.Token(0)[0] != '\t')
 						text += '\t';
 				}
-				text += child.Token(0);
+				text += LocaleInfo::TranslateData(child.Token(0));
 			}
 		}
 		else
@@ -1007,7 +1035,7 @@ void GameData::PrintShipTable()
 	for(auto &it : ships)
 	{
 		// Skip variants.
-		if(it.second.ModelName() != it.first)
+		if(it.second.ModelIdentifier() != it.first)
 			continue;
 		
 		const Ship &ship = it.second;
