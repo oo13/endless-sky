@@ -17,9 +17,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DistanceMap.h"
 #include "Flotsam.h"
 #include "Format.h"
+#include "Gettext.h"
 #include "Government.h"
 #include "Hardpoint.h"
-#include "LocaleInfo.h"
 #include "Mask.h"
 #include "Messages.h"
 #include "Minable.h"
@@ -247,14 +247,14 @@ namespace {
 	Format::ListOfWords listOfPlanetsNouns;
 	
 	// The Hook of translation.
-	function<void()> updateCoreTextdomain([](){
+	function<void()> updateCatalog([](){
 		// TRANSLATORS: The separators of planets.
 		listOfPlanets.SetSeparators(T(": and :, :, and ", "AI"));
 		// TRANSLATORS: The separators of planets' nouns.
 		listOfPlanetsNouns.SetSeparators(T(": or :, :, or "));
 	});
 	// Set the hook.
-	bool hooked = LocaleInfo::AddHookUpdatingCore(&updateCoreTextdomain);
+	bool hooked = AddHookUpdating(&updateCatalog);
 }
 
 

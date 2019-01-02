@@ -17,8 +17,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Date.h"
 #include "Fleet.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Government.h"
-#include "LocaleInfo.h"
 #include "Minable.h"
 #include "Planet.h"
 #include "Random.h"
@@ -114,7 +114,7 @@ void System::Load(const DataNode &node, Set<Planet> &planets)
 	if(node.Size() < 2)
 		return;
 	name = node.Token(1);
-	displayName = LocaleInfo::TranslateData(name, "system");
+	displayName = T_(name, "system");
 	
 	// For the following keys, if this data node defines a new value for that
 	// key, the old values should be cleared (unless using the "add" keyword).

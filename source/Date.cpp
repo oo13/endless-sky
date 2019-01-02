@@ -12,7 +12,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "Date.h"
 #include "Format.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
 
 using namespace std;
 using namespace Gettext;
@@ -89,6 +89,16 @@ namespace {
 	// TRANSLATORS: %1%: day,  %2%: full month
 	const T_ dateStringInConversationFormat = T_("%1% of %2%", "Date");
 	const T_ unknown = T_("???", "Date");
+	
+	// Epoch in translating.
+	int epochInTranslating = 0;
+	
+	// The Hook of translation.
+	function<void()> updateCatalog([](){
+		++epochInTranslating;
+	});
+	// Set the hook.
+	bool hooked = AddHookUpdating(&updateCatalog);
 }
 
 
@@ -108,7 +118,7 @@ const string &Date::ToString() const
 {
 	// Because this is a somewhat "costly" operation, cache the result. The
 	// cached value is discarded if the date is changed.
-	if(date && str.empty())
+	if(date && (str.empty() || epoch != epochInTranslating))
 	{
 		int day = Day();
 		int month = Month();
@@ -120,6 +130,7 @@ const string &Date::ToString() const
 		const string d = to_string(Day());
 		const string &w = dayOfWeek[week];
 		str = Format::StringF({dateStringFormat, w, d, m, y});
+		epoch = epochInTranslating;
 	}
 	
 	return str;

@@ -15,7 +15,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DataNode.h"
 #include "DataWriter.h"
 #include "Format.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
 
 #include <algorithm>
 #include <sstream>

@@ -21,11 +21,11 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Format.h"
 #include "Galaxy.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Government.h"
 #include "Information.h"
 #include "Interface.h"
 #include "LineShader.h"
-#include "LocaleInfo.h"
 #include "MapDetailPanel.h"
 #include "MapOutfitterPanel.h"
 #include "MapShipyardPanel.h"
@@ -697,7 +697,7 @@ void MapPanel::UpdateCache()
 				if(commodity >= 0)
 				{
 					const Trade::Commodity &com = GameData::Commodities()[commodity];
-					double price = system.Trade(com.name);
+					double price = system.Trade(com.name.Original());
 					if(!price)
 						value = numeric_limits<double>::quiet_NaN();
 					else

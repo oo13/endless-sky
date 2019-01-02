@@ -677,3 +677,10 @@ void FreeTypeGlyphs::SetUpShader()
 	screenWidth = 0;
 	screenHeight = 0;
 }
+
+
+
+void FreeTypeGlyphs::ClearCache() const
+{
+	cache.Clear();
+}

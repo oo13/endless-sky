@@ -19,9 +19,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FontSet.h"
 #include "Format.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Information.h"
 #include "Interface.h"
-#include "LocaleInfo.h"
 #include "MapDetailPanel.h"
 #include "Messages.h"
 #include "Outfit.h"
@@ -161,19 +161,19 @@ void TradingPanel::Draw()
 	for(const Trade::Commodity &commodity : GameData::Commodities())
 	{
 		y += 20;
-		int price = system.Trade(commodity.name);
-		int hold = player.Cargo().Get(commodity.name);
+		int price = system.Trade(commodity.name.Original());
+		int hold = player.Cargo().Get(commodity.name.Original());
 		
 		bool isSelected = (i++ == selectedRow);
 		const Color &color = (isSelected ? selected : unselected);
-		font.Draw(commodity.displayName, Point(NAME_X, y), color);
+		font.Draw(commodity.name.Str(), Point(NAME_X, y), color);
 		
 		if(price)
 		{
 			canBuy |= isSelected;
 			font.Draw(to_string(price), Point(PRICE_X, y), color);
 		
-			int basis = player.GetBasis(commodity.name);
+			int basis = player.GetBasis(commodity.name.Original());
 			if(basis && basis != price && hold)
 			{
 				string profit = Format::StringF({T("(profit: %1%)"), to_string(price - basis)});
@@ -238,19 +238,19 @@ bool TradingPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command)
 	{
 		for(const auto &it : GameData::Commodities())
 		{
-			int64_t amount = player.Cargo().Get(it.name);
-			int64_t price = system.Trade(it.name);
+			int64_t amount = player.Cargo().Get(it.name.Original());
+			int64_t price = system.Trade(it.name.Original());
 			if(!price || !amount)
 				continue;
 			
-			int64_t basis = player.GetBasis(it.name, -amount);
-			player.AdjustBasis(it.name, basis);
+			int64_t basis = player.GetBasis(it.name.Original(), -amount);
+			player.AdjustBasis(it.name.Original(), basis);
 			profit += amount * price + basis;
 			tonsSold += amount;
 			
-			player.Cargo().Remove(it.name, amount);
+			player.Cargo().Remove(it.name.Original(), amount);
 			player.Accounts().AddCredits(amount * price);
-			GameData::AddPurchase(system, it.name, -amount);
+			GameData::AddPurchase(system, it.name.Original(), -amount);
 		}
 		int day = player.GetDate().DaysSinceEpoch();
 		for(const auto &it : player.Cargo().Outfits())
@@ -303,7 +303,7 @@ void TradingPanel::Buy(int64_t amount)
 		return;
 	
 	amount *= Modifier();
-	const string &type = GameData::Commodities()[selectedRow].name;
+	const string &type = GameData::Commodities()[selectedRow].name.Original();
 	int64_t price = system.Trade(type);
 	if(!price)
 		return;

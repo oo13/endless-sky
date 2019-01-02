@@ -11,7 +11,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 */
 
 #include "Format.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
 
 #include <algorithm>
 #include <cctype>
@@ -19,11 +19,14 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <sstream>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
+	const T_ dpoint = T_(".", "decimal point");
+	const T_ sep = T_(",", "decimal separator");
+	
 	// Format an integer value, inserting its digits into the given string in
 	// reverse order and then reversing the string.
-	const char sep = LocaleInfo::GetThousandsSep();
 	void FormatInteger(int64_t value, bool isNegative, string &result)
 	{
 		int places = 0;
@@ -79,7 +82,7 @@ string Format::Credits(int64_t value)
 				result += static_cast<char>('0' + decimals % 10);
 				decimals /= 10;
 			}
-			result += LocaleInfo::GetDecimalPoint();
+			result += dpoint.Str();
 			absolute /= THRESHOLD[i];
 			break;
 		}
@@ -114,7 +117,7 @@ string Format::Number(double value)
 		else
 			result += static_cast<char>('0' + static_cast<int>(round(decimal * 10.)));
 		
-		result += LocaleInfo::GetDecimalPoint();
+		result += dpoint.Str();
 	}
 	
 	// Convert the number to a string, adding commas if needed.
@@ -131,7 +134,7 @@ string Format::Decimal(double value, int places)
 	double integer;
 	double fraction = fabs(modf(value, &integer));
 	
-	string result = to_string(static_cast<int>(integer)) + string(1, LocaleInfo::GetDecimalPoint());
+	string result = to_string(static_cast<int>(integer)) + dpoint.Str();
 	while(places--)
 	{
 		fraction = modf(fraction * 10., &integer);
@@ -149,15 +152,14 @@ double Format::Parse(const string &str)
 	double place = 1.;
 	double value = 0.;
 	
-	const char dec = LocaleInfo::GetDecimalPoint();
 	string::const_iterator it = str.begin();
 	string::const_iterator end = str.end();
-	while(it != end && (*it < '0' || *it > '9') && *it != dec)
+	while(it != end && (*it < '0' || *it > '9') && *it != dpoint.Str()[0])
 		++it;
 	
 	for( ; it != end; ++it)
 	{
-		if(*it == dec)
+		if(*it == dpoint.Str()[0])
 			place = .1;
 		else if(*it < '0' || *it > '9')
 			break;

@@ -28,11 +28,18 @@ class PlayerInfo;
 class SpaceportPanel : public Panel {
 public:
 	explicit SpaceportPanel(PlayerInfo &player);
+	SpaceportPanel(const SpaceportPanel& a) = delete;
+	SpaceportPanel &operator=(const SpaceportPanel& a) = delete;
+	virtual ~SpaceportPanel();
 	
 	void UpdateNews();
 	
 	virtual void Step() override;
 	virtual void Draw() override;
+	
+	
+private:
+	void UpdateTranslation();
 	
 	
 private:
@@ -43,6 +50,8 @@ private:
 	bool hasNews = false;
 	Information newsInfo;
 	WrappedText newsMessage;
+	
+	std::function<void()> updateCatalog;
 };
 
 

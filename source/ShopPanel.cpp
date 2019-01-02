@@ -18,8 +18,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FontSet.h"
 #include "Format.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Government.h"
-#include "LocaleInfo.h"
 #include "OutlineShader.h"
 #include "Planet.h"
 #include "PlayerInfo.h"
@@ -425,8 +425,7 @@ void ShopPanel::DrawMain()
 			Point size(bigFont.Width(category) + 25., bigFont.Height());
 			categoryZones.emplace_back(Point(Screen::Left(), side.Y()) + .5 * size, size, category);
 			SpriteShader::Draw(isCollapsed ? collapsedArrow : expandedArrow, side + Point(10., 10.));
-			bigFont.Draw(LocaleInfo::TranslateCore(category),
-				side + Point(25., 0.), isCollapsed ? dim : bright);
+			bigFont.Draw(T(category), side + Point(25., 0.), isCollapsed ? dim : bright);
 			
 			if(point.X() != begin.X())
 			{

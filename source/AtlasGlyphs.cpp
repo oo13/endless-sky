@@ -398,3 +398,9 @@ void AtlasGlyphs::SetUpShader()
 	aspectI = shader.Uniform("aspect");
 	positionI = shader.Uniform("position");
 }
+
+
+
+void AtlasGlyphs::ClearCache() const
+{
+}

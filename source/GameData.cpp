@@ -28,11 +28,12 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FontSet.h"
 #include "Galaxy.h"
 #include "GameEvent.h"
+#include "Gettext.h"
 #include "Government.h"
 #include "ImageSet.h"
 #include "Interface.h"
+#include "Languages.h"
 #include "LineShader.h"
-#include "LocaleInfo.h"
 #include "Minable.h"
 #include "Mission.h"
 #include "Music.h"
@@ -103,17 +104,17 @@ namespace {
 	Trade trade;
 	map<const System *, map<string, int>> purchases;
 	
-	map<const Sprite *, string> landingMessages;
+	map<const Sprite *, T_> landingMessages;
 	map<const Sprite *, double> solarPower;
 	map<const Sprite *, double> solarWind;
 	Set<News> news;
-	map<string, vector<string>> ratings;
+	map<string, vector<T_>> ratings;
 	
 	StarField background;
 	
-	map<string, string> tooltips;
-	map<string, string> helpMessages;
-	map<string, string> plugins;
+	map<string, vector<T_>> tooltips;
+	map<string, vector<T_>> helpMessages;
+	map<string, T_> plugins;
 	
 	SpriteQueue spriteQueue;
 	
@@ -174,9 +175,8 @@ bool GameData::BeginLoad(const char * const *argv)
 	// Generate a catalog of music files.
 	Music::Init(sources);
 	
-	// Bind all textdomain.
-	LocaleInfo::SetLocale();
-	LocaleInfo::Init(sources);
+	// Search all message catalogs.
+	Languages::SetCatalogFiles(sources);
 	
 	for(const string &source : sources)
 	{
@@ -429,7 +429,7 @@ void GameData::WriteEconomy(DataWriter &out)
 		}
 		out.WriteToken("system");
 		for(const auto &cit : GameData::Commodities())
-			out.WriteToken(cit.name);
+			out.WriteToken(cit.name.Original());
 		out.Write();
 		
 		for(const auto &sit : GameData::Systems())
@@ -440,7 +440,7 @@ void GameData::WriteEconomy(DataWriter &out)
 			
 			out.WriteToken(sit.second.Identifier());
 			for(const auto &cit : GameData::Commodities())
-				out.WriteToken(static_cast<int>(sit.second.Supply(cit.name)));
+				out.WriteToken(static_cast<int>(sit.second.Supply(cit.name.Original())));
 			out.Write();
 		}
 	}
@@ -474,14 +474,14 @@ void GameData::StepEconomy()
 		if(!system.Links().empty())
 			for(const Trade::Commodity &commodity : trade.Commodities())
 			{
-				double supply = system.Supply(commodity.name);
+				double supply = system.Supply(commodity.name.Original());
 				for(const System *neighbor : system.Links())
 				{
 					double scale = neighbor->Links().size();
 					if(scale)
-						supply += neighbor->Exports(commodity.name) / scale;
+						supply += neighbor->Exports(commodity.name.Original()) / scale;
 				}
-				system.SetSupply(commodity.name, supply);
+				system.SetSupply(commodity.name.Original(), supply);
 			}
 	}
 }
@@ -707,11 +707,11 @@ const vector<Trade::Commodity> &GameData::SpecialCommodities()
 const std::string &GameData::DisplayNameOfCommodity(const std::string &name)
 {
 	for(const auto &it : trade.Commodities())
-		if(it.name == name)
-			return it.displayName;
+		if(it.name.Original() == name)
+			return it.name.Str();
 	for(const auto &it : trade.SpecialCommodities())
-		if(it.name == name)
-			return it.displayName;
+		if(it.name.Original() == name)
+			return it.name.Str();
 	return name;
 }
 
@@ -729,7 +729,7 @@ const string &GameData::LandingMessage(const Sprite *sprite)
 {
 	static const string EMPTY;
 	auto it = landingMessages.find(sprite);
-	return (it == landingMessages.end() ? EMPTY : it->second);
+	return (it == landingMessages.end() ? EMPTY : it->second.Str());
 }
 
 
@@ -774,7 +774,7 @@ const string &GameData::Rating(const string &type, int level)
 		return EMPTY;
 	
 	level = max(0, min<int>(it->second.size() - 1, level));
-	return it->second[level];
+	return it->second[level].Str();
 }
 
 
@@ -793,7 +793,7 @@ void GameData::SetHaze(const Sprite *sprite)
 
 
 
-const string &GameData::Tooltip(const string &label)
+string GameData::Tooltip(const string &label)
 {
 	static const string EMPTY;
 	auto it = tooltips.find(label);
@@ -807,7 +807,7 @@ const string &GameData::Tooltip(const string &label)
 	const string sellsForT = T("sells for");
 	if(it == tooltips.end() && !label.compare(0, sellsForT.length(), sellsForT))
 		it = tooltips.find("sells for:");
-	return (it == tooltips.end() ? EMPTY : it->second);
+	return (it == tooltips.end() ? EMPTY : Concat(it->second));
 }
 
 
@@ -816,19 +816,19 @@ string GameData::HelpMessage(const string &name)
 {
 	static const string EMPTY;
 	auto it = helpMessages.find(name);
-	return Command::ReplaceNamesWithKeys(it == helpMessages.end() ? EMPTY : it->second);
+	return Command::ReplaceNamesWithKeys(it == helpMessages.end() ? EMPTY : Concat(it->second));
 }
 
 
 
-const map<string, string> &GameData::HelpTemplates()
+const map<string, vector<T_>> &GameData::HelpTemplates()
 {
 	return helpMessages;
 }
 
 
 
-const map<string, string> &GameData::PluginAboutText()
+const map<string, T_> &GameData::PluginAboutText()
 {
 	return plugins;
 }
@@ -864,7 +864,7 @@ void GameData::LoadSources()
 		string name = it->substr(pos, it->length() - 1 - pos);
 		
 		// Load the about text and the icon, if any.
-		plugins[name] = Files::Read(*it + "about.txt");
+		plugins[name] = T_(Files::Read(*it + "about.txt"));
 		
 		// Create an image set for the plugin icon.
 		shared_ptr<ImageSet> icon(new ImageSet(name));
@@ -918,6 +918,8 @@ void GameData::LoadFile(const string &path, bool debugMode)
 			governments.Get(node.Token(1))->Load(node);
 		else if(key == "interface" && node.Size() >= 2)
 			interfaces.Get(node.Token(1))->Load(node);
+		else if(key == "language" && node.Size() >= 2)
+			Languages::Load(node);
 		else if(key == "minable" && node.Size() >= 2)
 			minables.Get(node.Token(1))->Load(node);
 		else if(key == "mission" && node.Size() >= 2)
@@ -949,10 +951,7 @@ void GameData::LoadFile(const string &path, bool debugMode)
 		else if(key == "landing message" && node.Size() >= 2)
 		{
 			for(const DataNode &child : node)
-			{
-				const string &msg = LocaleInfo::TranslateData(node.Token(1));
-				landingMessages[SpriteSet::Get(child.Token(0))] = msg;
-			}
+				landingMessages[SpriteSet::Get(child.Token(0))] = T_(node.Token(1));
 		}
 		else if(key == "star" && node.Size() >= 2)
 		{
@@ -971,24 +970,25 @@ void GameData::LoadFile(const string &path, bool debugMode)
 			news.Get(node.Token(1))->Load(node);
 		else if(key == "rating" && node.Size() >= 2)
 		{
-			vector<string> &list = ratings[node.Token(1)];
+			vector<T_> &list = ratings[node.Token(1)];
 			list.clear();
 			for(const DataNode &child : node)
-				list.push_back(LocaleInfo::TranslateData(child.Token(0), "rating"));
+				list.push_back(T_(child.Token(0), "rating"));
 		}
 		else if((key == "tip" || key == "help") && node.Size() >= 2)
 		{
-			string &text = (key == "tip" ? tooltips : helpMessages)[node.Token(1)];
+			vector<T_> &text = (key == "tip" ? tooltips : helpMessages)[node.Token(1)];
 			text.clear();
 			for(const DataNode &child : node)
 			{
 				if(!text.empty())
 				{
-					text += '\n';
+					string sep(1, '\n');
 					if(child.Token(0)[0] != '\t')
-						text += '\t';
+						sep += '\t';
+					text.push_back(Tx(sep));
 				}
-				text += LocaleInfo::TranslateData(child.Token(0));
+				text.push_back(T_(child.Token(0)));
 			}
 		}
 		else

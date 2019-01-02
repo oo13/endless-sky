@@ -14,7 +14,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "DataNode.h"
 #include "DataWriter.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
 
 #include <algorithm>
 #include <cmath>
@@ -43,8 +43,7 @@ int64_t Mortgage::Maximum(int64_t annualRevenue, int creditScore, int64_t curren
 
 // Create a new mortgage of the given amount.
 Mortgage::Mortgage(int64_t principal, int creditScore, int term)
-	: type(creditScore <= 0 ? G("Fine") : G("Mortgage")),
-	typeName(),
+	: type(creditScore <= 0 ? T_("Fine") : T_("Mortgage")),
 	principal(principal),
 	interest((600 - creditScore / 2) * .00001),
 	interestString("0." + to_string(600 - creditScore / 2) + "%"),
@@ -66,10 +65,9 @@ Mortgage::Mortgage(const DataNode &node)
 void Mortgage::Load(const DataNode &node)
 {
 	if(node.Size() >= 2)
-		type = node.Token(1);
+		type = T_(node.Token(1), T_::FORCE);
 	else
-		type = "Mortgage";
-	typeName = "";
+		type = T_("Mortgage", T_::FORCE);
 	
 	for(const DataNode &child : node)
 	{
@@ -90,7 +88,7 @@ void Mortgage::Load(const DataNode &node)
 
 void Mortgage::Save(DataWriter &out) const
 {
-	out.Write("mortgage", type);
+	out.Write("mortgage", type.Original());
 	out.BeginChild();
 	{
 		out.Write("principal", principal);
@@ -139,7 +137,7 @@ int64_t Mortgage::PayExtra(int64_t amount)
 // and "Fine" if this is a fine imposed on you for illegal activities.
 const string &Mortgage::Type() const
 {
-	return type;
+	return type.Original();
 }
 
 
@@ -147,9 +145,7 @@ const string &Mortgage::Type() const
 // The TypeName() is equivallent Type(), but this function can return a translated text.
 const std::string &Mortgage::TypeName() const
 {
-	if(typeName.empty())
-		typeName = T(type);
-	return typeName;
+	return type.Str();
 }
 
 

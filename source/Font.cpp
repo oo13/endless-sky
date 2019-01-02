@@ -15,13 +15,14 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "AtlasGlyphs.h"
 #include "DataNode.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Files.h"
 #include "FreeTypeGlyphs.h"
-#include "LocaleInfo.h"
 #include "Point.h"
 
 #include <algorithm>
 #include <cmath>
+#include <list>
 #include <utility>
 
 using namespace std;
@@ -77,7 +78,7 @@ namespace {
 
 
 Font::Font()
-	: size(0), heightOverride(0)
+	: referenceFont(nullptr)
 {
 	widthCache.SetUpdateInterval(3600);
 	drawCache.SetUpdateInterval(3600);
@@ -85,11 +86,9 @@ Font::Font()
 
 
 
-bool Font::Load(const DataNode &node)
+bool Font::Load(const DataNode &node, int size)
 {
-	// Ignore if already loaded.
-	if(!sources.empty())
-		return false;
+	size_t oldCount = sources.size();
 	
 	if(node.Token(0) != "font")
 	{
@@ -97,40 +96,8 @@ bool Font::Load(const DataNode &node)
 		return false;
 	}
 	
-	// Localization.
-	const DataNode tnode = LocaleInfo::TranslateNode(node);
-	
-	// Get size and height.
-	size = 0;
-	heightOverride = 0;
-	for(const DataNode &child : tnode)
-	{
-		if(child.Token(0) == "height override")
-			heightOverride = round(child.Value(1));
-		if(child.Token(0) != "size")
-			continue;
-		
-		if(size)
-		{
-			child.PrintTrace("Too many font sizes:");
-			return false;
-		}
-		size = round(child.Value(1));
-		if(size <= 0)
-		{
-			child.PrintTrace("Invalid font size:");
-			return false;
-		}
-	}
-	if(!size)
-	{
-		tnode.PrintTrace("Must have one font size:");
-		return false;
-	}
-	
 	// Get glyph source.
-	sources.clear();
-	for(const DataNode &child : tnode)
+	for(const DataNode &child : node)
 	{
 		const string &key = child.Token(0);
 		if(key != "atlas" && key != "freetype")
@@ -173,10 +140,16 @@ bool Font::Load(const DataNode &node)
 			child.PrintTrace("Load failed:");
 			return false;
 		}
+		
+		IGlyphs *newFont = sources.back().get();
+		if(count == 0)
+			referenceFont = newFont;
+		fontName[Files::Name(paths.back())] = count;
+		preferedFont.push_back(newFont);
 	}
-	if(sources.empty())
+	if(sources.size() == oldCount)
 	{
-		tnode.PrintTrace("Must have at least one glyph source (atlas or freetype):");
+		node.PrintTrace("Must have at least one glyph source (atlas or freetype):");
 		return false;
 	}
 	
@@ -200,17 +173,16 @@ void Font::Draw(const string &str, const Point &point, const Color &color) const
 }
 
 
-
 void Font::DrawAliased(const string &str, double x, double y, const Color &color) const
 {
-	if(sources.empty() || str.empty())
+	if(preferedFont.empty() || str.empty())
 		return;
 	
-	y += sources[0]->Baseline();
-	if(sources.size() == 1)
+	y += referenceFont->Baseline();
+	if(preferedFont.size() == 1)
 	{
 		const string buf = ReplaceCharacters(str);
-		sources[0]->Draw(buf, x, y, color);
+		preferedFont[0]->Draw(buf, x, y, color);
 	}
 	else
 	{
@@ -219,7 +191,7 @@ void Font::DrawAliased(const string &str, double x, double y, const Color &color
 		{
 			for(const auto &section : *cached.first)
 			{
-				sources[section.sourceNumber]->Draw(section.text, x, y, color);
+				preferedFont[section.priorityNumber]->Draw(section.text, x, y, color);
 				x += section.width;
 			}
 		}
@@ -227,9 +199,9 @@ void Font::DrawAliased(const string &str, double x, double y, const Color &color
 		{
 			vector<DrawnData> cacheData;
 			const string buf = ReplaceCharacters(str);
-			if(sources[0]->FindUnsupported(buf) == buf.length())
+			if(preferedFont[0]->FindUnsupported(buf) == buf.length())
 			{
-				sources[0]->Draw(buf, x, y, color);
+				preferedFont[0]->Draw(buf, x, y, color);
 				cacheData.emplace_back(buf, 0, 0.0);
 			}
 			else
@@ -239,8 +211,8 @@ void Font::DrawAliased(const string &str, double x, double y, const Color &color
 				for(const auto &section : sections)
 				{
 					string tmp(buf, pos, section.second - pos);
-					sources[section.first]->Draw(tmp, x, y, color);
-					const double w = sources[section.first]->Width(tmp);
+					preferedFont[section.first]->Draw(tmp, x, y, color);
+					const double w = preferedFont[section.first]->Width(tmp);
 					x += w;
 					pos = section.second;
 					cacheData.emplace_back(tmp, section.first, w);
@@ -255,7 +227,7 @@ void Font::DrawAliased(const string &str, double x, double y, const Color &color
 
 int Font::Width(const string &str, double *highPrecisionWidth) const
 {
-	if(sources.empty())
+	if(preferedFont.empty())
 		return 0;
 	
 	const auto cached = widthCache.Use(str);
@@ -268,8 +240,8 @@ int Font::Width(const string &str, double *highPrecisionWidth) const
 	
 	const string buf = ReplaceCharacters(str);
 	double w = 0;
-	if(sources.size() == 1 || sources[0]->FindUnsupported(buf) == buf.length())
-		w = sources[0]->Width(buf);
+	if(preferedFont.size() == 1 || preferedFont[0]->FindUnsupported(buf) == buf.length())
+		w = preferedFont[0]->Width(buf);
 	else
 	{
 		size_t pos = 0;
@@ -277,7 +249,7 @@ int Font::Width(const string &str, double *highPrecisionWidth) const
 		for(const auto &section : sections)
 		{
 			string tmp(buf, pos, section.second - pos);
-			w += sources[section.first]->Width(tmp);
+			w += preferedFont[section.first]->Width(tmp);
 			pos = section.second;
 		}
 	}
@@ -381,30 +353,67 @@ string Font::TruncateMiddle(const string &str, int width, bool ellipsis) const
 
 int Font::Height() const
 {
-	if(sources.empty())
+	if(!referenceFont)
 		return 0;
 	
-	if(heightOverride > 0)
-		return heightOverride;
-	else
-		return ceil(sources[0]->LineHeight());
+	return ceil(referenceFont->LineHeight());
 }
 
 
 
 int Font::Space() const
 {
-	if(sources.empty())
+	if(!referenceFont)
 		return 0;
 	
-	return ceil(sources[0]->Space());
+	return ceil(referenceFont->Space());
 }
 
 
 
-int Font::Size() const
+void Font::SetFontPriority(const vector<string> &priorityList, const string &referenece)
 {
-	return size;
+	if(sources.empty())
+		return;
+	
+	vector<size_t> copied;
+	size_t dest = 0;
+	for(const auto &name : priorityList)
+	{
+		const auto it = fontName.find(name);
+		if(it != fontName.end())
+		{
+			preferedFont[dest] = sources[it->second].get();
+			++dest;
+			copied.push_back(it->second);
+		}
+		else
+			Files::LogError("Unknown font name: " + name);
+	}
+	sort(copied.begin(), copied.end());
+	size_t skipIndex = 0;
+	for(size_t src = 0; src < sources.size(); ++src)
+	{
+		if(skipIndex < copied.size() && copied[skipIndex] == src)
+			skipIndex++;
+		else
+		{
+			preferedFont[dest] = sources[src].get();
+			++dest;
+		}
+	}
+	
+	referenceFont = preferedFont[0];
+	if(!referenece.empty())
+	{
+		const auto ref = fontName.find(referenece);
+		if(ref == fontName.end())
+			Files::LogError("Unknown font name: " + referenece);
+		else
+			referenceFont = sources[ref->second].get();
+	}
+	
+	ClearCache();
 }
 
 
@@ -557,9 +566,9 @@ vector<pair<size_t,size_t>> Font::Prepare(const std::string &str) const
 		bool isUnsupported = true;
 		
 		// Supported data.
-		for(size_t i = 0; i < sources.size(); ++i)
+		for(size_t i = 0; i < preferedFont.size(); ++i)
 		{
-			size_t end = sources[i]->FindUnsupported(str, start);
+			size_t end = preferedFont[i]->FindUnsupported(str, start);
 			if(end == start)
 				continue;
 			const size_t next = i == 0 ? end : NextCodePoint(str, start);
@@ -590,4 +599,14 @@ vector<pair<size_t,size_t>> Font::Prepare(const std::string &str) const
 
 Font::IGlyphs::~IGlyphs()
 {
+}
+
+
+
+void Font::ClearCache() const
+{
+	widthCache.Clear();
+	drawCache.Clear();
+	for(auto &source : sources)
+		source->ClearCache();
 }

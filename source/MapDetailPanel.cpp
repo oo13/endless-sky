@@ -18,8 +18,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FontSet.h"
 #include "Format.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Government.h"
-#include "LocaleInfo.h"
 #include "MapOutfitterPanel.h"
 #include "MapShipyardPanel.h"
 #include "pi.h"
@@ -512,15 +512,15 @@ void MapDetailPanel::DrawInfo()
 			isSelected = (&commodity == &GameData::Commodities()[this->commodity]);
 		const Color &color = isSelected ? medium : dim;
 		
-		font.Draw(commodity.displayName, uiPoint, color);
+		font.Draw(commodity.name.Str(), uiPoint, color);
 		
 		string price;
 		
 		bool hasVisited = player.HasVisited(selectedSystem);
 		if(hasVisited && selectedSystem->IsInhabited(player.Flagship()))
 		{
-			int value = selectedSystem->Trade(commodity.name);
-			int localValue = (player.GetSystem() ? player.GetSystem()->Trade(commodity.name) : 0);
+			int value = selectedSystem->Trade(commodity.name.Original());
+			int localValue = (player.GetSystem() ? player.GetSystem()->Trade(commodity.name.Original()) : 0);
 			// Don't "compare" prices if the current system is uninhabited and
 			// thus has no prices to compare to.
 			bool noCompare = (!player.GetSystem() || !player.GetSystem()->IsInhabited(player.Flagship()));

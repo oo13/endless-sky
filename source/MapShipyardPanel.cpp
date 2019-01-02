@@ -14,7 +14,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "Format.h"
 #include "GameData.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
 #include "Planet.h"
 #include "PlayerInfo.h"
 #include "Point.h"

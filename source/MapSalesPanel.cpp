@@ -18,9 +18,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Font.h"
 #include "FontSet.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Government.h"
 #include "ItemInfoDisplay.h"
-#include "LocaleInfo.h"
 #include "Outfit.h"
 #include "PlayerInfo.h"
 #include "Point.h"
@@ -318,7 +318,7 @@ bool MapSalesPanel::DrawHeader(Point &corner, const string &category)
 	
 	const Color &textColor = *GameData::Colors().Get(hide ? "medium" : "bright");
 	const Font &bigFont = FontSet::Get(18);
-	bigFont.Draw(LocaleInfo::TranslateCore(category), corner + Point(30., 15.), textColor);
+	bigFont.Draw(T(category), corner + Point(30., 15.), textColor);
 	AddZone(Rectangle::FromCorner(corner, Point(WIDTH, 40.)), [this, category](){ ClickCategory(category); });
 	corner.Y() += 40.;
 	

@@ -18,8 +18,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Dialog.h"
 #include "Format.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Government.h"
-#include "LocaleInfo.h"
 #include "Messages.h"
 #include "PlayerInfo.h"
 #include "Random.h"
@@ -102,16 +102,16 @@ void NPC::Load(const DataNode &node, const string &context)
 		{
 			for(int i = 1; i < child.Size(); ++i)
 			{
-				if(!dialogText.empty())
-					dialogText += "\n\t";
-				dialogText += LocaleInfo::TranslateData(child.Token(i));
+				if(!IsEmptyText(dialogText))
+					dialogText.push_back(Tx("\n\t"));
+				dialogText.emplace_back(child.Token(i));
 			}
 			for(const DataNode &grand : child)
 				for(int i = 0; i < grand.Size(); ++i)
 				{
-					if(!dialogText.empty())
-						dialogText += "\n\t";
-					dialogText += LocaleInfo::TranslateData(grand.Token(i));
+					if(!IsEmptyText(dialogText))
+						dialogText.push_back(Tx("\n\t"));
+					dialogText.emplace_back(grand.Token(i));
 				}
 		}
 		else if(child.Token(0) == "conversation" && child.HasChildren())
@@ -133,7 +133,7 @@ void NPC::Load(const DataNode &node, const string &context)
 			{
 				// Loading a ship managed by GameData, i.e. "base models" and variants.
 				stockShips.push_back(GameData::Ships().Get(child.Token(1)));
-				shipNames.push_back(LocaleInfo::TranslateData(child.Token(1 + (child.Size() > 2)), "ship"));
+				shipNames.emplace_back(child.Token(1 + (child.Size() > 2)), "ship");
 			}
 			else
 			{
@@ -199,13 +199,13 @@ void NPC::Save(DataWriter &out) const
 			out.Write("government", government->GetIdentifier());
 		personality.Save(out);
 		
-		if(!dialogText.empty())
+		if(!IsEmptyText(dialogText))
 		{
 			out.Write("dialog");
 			out.BeginChild();
 			{
 				// Break the text up into paragraphs.
-				for(const string &line : Format::Split(dialogText, "\n\t"))
+				for(const string &line : Format::Split(Concat(dialogText), "\n\t"))
 					out.Write(line);
 			}
 			out.EndChild();
@@ -302,8 +302,8 @@ void NPC::Do(const ShipEvent &event, PlayerInfo &player, UI *ui, bool isVisible)
 		// it, to allow the completing event's target to be destroyed.
 		if(!conversation.IsEmpty())
 			ui->Push(new ConversationPanel(player, conversation, nullptr, ship));
-		else if(!dialogText.empty())
-			ui->Push(new Dialog(dialogText));
+		else if(!IsEmptyText(dialogText))
+				ui->Push(new Dialog(Concat(dialogText)));
 	}
 }
 
@@ -420,10 +420,12 @@ NPC NPC::Instantiate(map<string, string> &subs, const System *origin, const Syst
 	}
 	auto shipIt = stockShips.begin();
 	auto nameIt = shipNames.begin();
+	result.shipNames.clear();
 	for( ; shipIt != stockShips.end() && nameIt != shipNames.end(); ++shipIt, ++nameIt)
 	{
 		result.ships.push_back(make_shared<Ship>(**shipIt));
-		result.ships.back()->SetName(*nameIt);
+		result.ships.back()->SetName(nameIt->Str());
+		result.shipNames.push_back(Tx(nameIt->Str()));
 	}
 	for(const Fleet &fleet : fleets)
 		fleet.Place(*result.system, result.ships, false);
@@ -449,8 +451,7 @@ NPC NPC::Instantiate(map<string, string> &subs, const System *origin, const Syst
 		subs["<npc>"] = result.ships.front()->Name();
 	
 	// Do string replacement on any dialog or conversation.
-	if(!dialogText.empty())
-		result.dialogText = Format::Replace(dialogText, subs);
+	result.dialogText = vector<T_>{Tx(Format::Replace(Concat(dialogText), subs))};
 	
 	if(stockConversation)
 		result.conversation = stockConversation->Substitute(subs);

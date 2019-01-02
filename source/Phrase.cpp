@@ -14,12 +14,38 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "DataNode.h"
 #include "GameData.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
 #include "Random.h"
 
 #include <regex>
+#include <set>
 
 using namespace std;
+using namespace Gettext;
+
+namespace {
+	// List of all instances need to translate.
+	set<Phrase*> &GetListOfTranslating()
+	{
+		static set<Phrase*> *listOfTranslating(new set<Phrase*>);
+		return *listOfTranslating;
+	}
+	
+	// The Hook of translation.
+	function<void()> updateCatalog([](){
+		for(auto it : GetListOfTranslating())
+			it->ParseAllNodes();
+	});
+	// Set the hook.
+	bool hooked = AddHookUpdating(&updateCatalog);
+}
+
+
+
+Phrase::~Phrase() noexcept
+{
+	GetListOfTranslating().erase(this);
+}
 
 
 
@@ -27,8 +53,28 @@ void Phrase::Load(const DataNode &node)
 {
 	// Set the name of this phrase, so we know it has been loaded.
 	name = node.Size() >= 2 ? node.Token(1) : "Unnamed Phrase";
+	
+	originalNode.push_back(node);
+	ParseNode(node);
+	if(IsTranslating())
+		GetListOfTranslating().insert(this);
+}
+
+
+
+void Phrase::ParseAllNodes()
+{
+	parts.clear();
+	for(const auto &node : originalNode)
+		ParseNode(node);
+}
+
+
+
+void Phrase::ParseNode(const DataNode &node)
+{
 	// Translate all nodes.
-	const DataNode tnode = LocaleInfo::TranslateNode(node);
+	const DataNode tnode = TranslateNode(node);
 	
 	parts.emplace_back();
 	for(const DataNode &child : tnode)

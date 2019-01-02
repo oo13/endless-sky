@@ -14,6 +14,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #define GOVERNMENT_H_
 
 #include "Color.h"
+#include "Gettext.h"
 
 #include <map>
 #include <string>
@@ -113,8 +114,7 @@ public:
 	
 private:
 	unsigned id;
-	std::string name;
-	std::string displayName;
+	Gettext::T_ name;
 	int swizzle = 0;
 	Color color;
 	

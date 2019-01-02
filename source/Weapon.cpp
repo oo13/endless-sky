@@ -25,6 +25,11 @@ using namespace std;
 
 
 
+Weapon::~Weapon() noexcept
+{}
+
+
+
 // Load from a "weapon" node, either in an outfit or in a ship (explosion).
 void Weapon::LoadWeapon(const DataNode &node)
 {

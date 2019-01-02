@@ -17,10 +17,11 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DataNode.h"
 #include "Effect.h"
 #include "GameData.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
 #include "SpriteSet.h"
 
 #include <cmath>
+#include <set>
 
 using namespace std;
 using namespace Gettext;
@@ -76,8 +77,8 @@ void Outfit::Load(const DataNode &node)
 			ammo = GameData::Outfits().Get(child.Token(1));
 		else if(child.Token(0) == "description" && child.Size() >= 2)
 		{
-			description += LocaleInfo::TranslateData(child.Token(1));
-			description += '\n';
+			description.emplace_back(child.Token(1));
+			description.push_back(Tx("\n"));
 		}
 		else if(child.Token(0) == "cost" && child.Size() >= 2)
 			cost = child.Value(1);
@@ -128,14 +129,14 @@ void Outfit::Load(const DataNode &node)
 
 string Outfit::Name(unsigned long n) const
 {
-	return LocaleInfo::TranslateData(name, pluralName, "outfit", n);
+	return nT(name, pluralName, "outfit", n);
 }
 
 
 
 string Outfit::PluralName() const
 {
-	return LocaleInfo::TranslateData(pluralName, "outfit");
+	return T(pluralName, "outfit");
 }
 
 
@@ -154,9 +155,9 @@ const string &Outfit::Category() const
 
 
 
-const string &Outfit::Description() const
+string Outfit::Description() const
 {
-	return description;
+	return Concat(description);
 }
 
 

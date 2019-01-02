@@ -13,6 +13,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #ifndef TRADE_H_
 #define TRADE_H_
 
+#include "Gettext.h"
+
 #include <string>
 #include <vector>
 
@@ -28,11 +30,10 @@ class Trade {
 public:
 	class Commodity {
 	public:
-		std::string name;
-		std::string displayName;
+		Gettext::T_ name;
 		int low = 0;
 		int high = 0;
-		std::vector<std::string> items;
+		std::vector<Gettext::T_> items;
 	};
 	
 	

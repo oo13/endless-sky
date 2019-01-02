@@ -20,8 +20,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FontSet.h"
 #include "Format.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Hardpoint.h"
-#include "LocaleInfo.h"
 #include "Outfit.h"
 #include "Planet.h"
 #include "PlayerInfo.h"
@@ -593,7 +593,7 @@ void OutfitterPanel::FailSell(bool toCargo) const
 				for(const pair<const char *, double> &it : selectedOutfit->Attributes())
 					if(ship->Attributes().Get(it.first) < it.second)
 					{
-						const string attrName = LocaleInfo::TranslateData(it.first, "Attribute");
+						const string attrName = T(it.first, "Attribute");
 						for(const auto &sit : ship->Outfits())
 							if(sit.first->Get(it.first) < 0.)
 							{

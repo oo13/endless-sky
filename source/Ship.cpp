@@ -19,8 +19,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Flotsam.h"
 #include "Format.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Government.h"
-#include "LocaleInfo.h"
 #include "Mask.h"
 #include "Messages.h"
 #include "Phrase.h"
@@ -145,11 +145,11 @@ void Ship::Load(const DataNode &node)
 		else if(child.Token(0) == "thumbnail" && child.Size() >= 2)
 			thumbnail = SpriteSet::Get(child.Token(1));
 		else if(key == "name" && child.Size() >= 2)
-			name = LocaleInfo::TranslateData(child.Token(1), "ship");
+			name = T_(child.Token(1), "ship");
 		else if(key == "plural" && child.Size() >= 2)
 			pluralModelName = child.Token(1);
 		else if(key == "noun" && child.Size() >= 2)
-			noun = LocaleInfo::TranslateData(child.Token(1), "ship");
+			noun = T_(child.Token(1), "ship");
 		else if(key == "swizzle" && child.Size() >= 2)
 			customSwizzle = child.Value(1);
 		else if(key == "attributes" || add)
@@ -320,15 +320,15 @@ void Ship::Load(const DataNode &node)
 				description.clear();
 				hasDescription = true;
 			}
-			description += LocaleInfo::TranslateData(child.Token(1));
-			description += '\n';
+			description.emplace_back(child.Token(1));
+			description.push_back(Tx("\n"));
 		}
 		else if(key != "actions")
 			child.PrintTrace("Skipping unrecognized attribute:");
 	}
 	
-	if(noun.empty())
-		noun = LocaleInfo::TranslateData("ship", "ship");
+	if(noun.Original().empty())
+		noun = T_("ship", "ship");
 }
 
 
@@ -348,7 +348,7 @@ void Ship::FinishLoading(bool isNewInstance)
 		explosionWeapon = &model->BaseAttributes();
 		if(pluralModelName.empty())
 			pluralModelName = model->pluralModelName;
-		if(noun.empty())
+		if(noun.Original().empty())
 			noun = model->noun;
 		if(!thumbnail)
 			thumbnail = model->thumbnail;
@@ -377,7 +377,7 @@ void Ship::FinishLoading(bool isNewInstance)
 			finalExplosions = base->finalExplosions;
 		if(outfits.empty())
 			outfits = base->outfits;
-		if(description.empty())
+		if(IsEmptyText(description))
 			description = base->description;
 		
 		bool hasHardpoints = false;
@@ -443,8 +443,8 @@ void Ship::FinishLoading(bool isNewInstance)
 			it.second -= excess;
 			
 			cerr << modelName;
-			if(!name.empty())
-				cerr << " \"" << name << "\"";
+			if(!name.Original().empty())
+				cerr << " \"" << name.Original() << "\"";
 			cerr << ": outfit \"" << it.first->Identifier() << "\" equipped but not included in outfit list." << endl;
 		}
 		else if(!it.first->IsWeapon())
@@ -453,8 +453,8 @@ void Ship::FinishLoading(bool isNewInstance)
 			// hardpoint. Hardpoint::Install removes it, but issue a
 			// warning so the definition can be fixed.
 			cerr << modelName;
-			if(!name.empty())
-				cerr << " \"" << name << "\"";
+			if(!name.Original().empty())
+				cerr << " \"" << name.Original() << "\"";
 			cerr << ": outfit \"" << it.first->Identifier() << "\" is not a weapon, but is installed as one." << endl;
 		}
 	}
@@ -480,7 +480,7 @@ void Ship::FinishLoading(bool isNewInstance)
 	{
 		if(it.first->Identifier().empty())
 		{
-			cerr << "Unrecognized outfit in " << modelName << " \"" << name << "\"" << endl;
+			cerr << "Unrecognized outfit in " << modelName << " \"" << name.Original() << "\"" << endl;
 			continue;
 		}
 		attributes.Add(*it.first, it.second);
@@ -508,8 +508,8 @@ void Ship::FinishLoading(bool isNewInstance)
 		{
 			bool isTurret = hardpoint.IsTurret();
 			cerr << modelName;
-			if(!name.empty())
-				cerr << " \"" << name << "\"";
+			if(!name.Original().empty())
+				cerr << " \"" << name.Original() << "\"";
 			cerr << ": outfit \"" << outfit->Identifier() << "\" installed as a ";
 			cerr << (isTurret ? "turret but is a gun." : "gun but is a turret.");
 			cerr << "\n\t" << (isTurret ? "turret " : "gun ");
@@ -552,7 +552,7 @@ void Ship::FinishLoading(bool isNewInstance)
 	{
 		// This check is mostly useful for variants and stock ships, which have
 		// no names. Instead, print the outfits and attributes to facilitate identification.
-		cerr << (!name.empty() ? "Ship \"" + name + "\" " : "") << "(" + modelName + "):\n"
+		cerr << (!name.Original().empty() ? "Ship \"" + name.Original() + "\" " : "") << "(" + modelName + "):\n"
 				<< warning << "outfits:" << endl;
 		for(const auto &it : outfits)
 			cerr << '\t' << it.second << " " + it.first->Name() << endl;
@@ -581,11 +581,11 @@ void Ship::Save(DataWriter &out) const
 	out.Write("ship", modelName);
 	out.BeginChild();
 	{
-		out.Write("name", name);
+		out.Write("name", name.Str());
 		if(pluralModelName != modelName + 's')
 			out.Write("plural", pluralModelName);
-		if(!noun.empty())
-			out.Write("noun", noun);
+		if(!noun.Str().empty())
+			out.Write("noun", noun.Str());
 		SaveSprite(out);
 		
 		if(neverDisabled)
@@ -701,21 +701,21 @@ void Ship::Save(DataWriter &out) const
 
 const string &Ship::Name() const
 {
-	return name;
+	return name.Str();
 }
 
 
 
 string Ship::ModelName(unsigned long n) const
 {
-	return LocaleInfo::TranslateData(modelName, pluralModelName, "ship", n);
+	return nT(modelName, pluralModelName, "ship", n);
 }
 
 
 
 string Ship::PluralModelName() const
 {
-	return LocaleInfo::TranslateData(pluralModelName, "ship");
+	return T(pluralModelName, "ship");
 }
 
 
@@ -736,9 +736,9 @@ const string &Ship::Noun() const
 
 
 // Get this ship's description.
-const string &Ship::Description() const
+string Ship::Description() const
 {
-	return description;
+	return Concat(description);
 }
 
 
@@ -861,9 +861,10 @@ void Ship::Place(Point position, Point velocity, Angle angle)
 
 
 // Set the name of this particular ship.
+// Supposedly, this name is already translated.
 void Ship::SetName(const string &name)
 {
-	this->name = name;
+	this->name = Tx(name);
 }
 
 

@@ -21,9 +21,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "GameData.h"
 #include "FontSet.h"
 #include "Format.h"
+#include "Gettext.h"
 #include "HiringPanel.h"
 #include "Interface.h"
-#include "LocaleInfo.h"
 #include "MapDetailPanel.h"
 #include "MissionPanel.h"
 #include "OutfitterPanel.h"
@@ -45,7 +45,8 @@ using namespace Gettext;
 PlanetPanel::PlanetPanel(PlayerInfo &player, function<void()> callback)
 	: player(player), callback(callback),
 	planet(*player.GetPlanet()), system(*player.GetSystem()),
-	ui(*GameData::Interfaces().Get("planet"))
+	ui(*GameData::Interfaces().Get("planet")),
+	updateCatalog([this](){ UpdateTranslation(); })
 {
 	trading.reset(new TradingPanel(player));
 	bank.reset(new BankPanel(player));
@@ -56,11 +57,19 @@ PlanetPanel::PlanetPanel(PlayerInfo &player, function<void()> callback)
 	text.SetAlignment(WrappedText::JUSTIFIED);
 	text.SetWrapWidth(480);
 	text.Wrap(planet.Description());
+	AddHookUpdating(&updateCatalog);
 	
 	// Since the loading of landscape images is deferred, make sure that the
 	// landscapes for this system are loaded before showing the planet panel.
 	GameData::Preload(planet.Landscape());
 	GameData::FinishLoading();
+}
+
+
+
+PlanetPanel::~PlanetPanel()
+{
+	RemoveHookUpdating(&updateCatalog);
 }
 
 
@@ -343,4 +352,11 @@ void PlanetPanel::TakeOff()
 			GetUI()->Pop(selectedPanel);
 		GetUI()->Pop(this);
 	}
+}
+
+
+
+void PlanetPanel::UpdateTranslation()
+{
+	text.Wrap(planet.Description());
 }

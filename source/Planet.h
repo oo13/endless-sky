@@ -13,6 +13,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #ifndef PLANET_H_
 #define PLANET_H_
 
+#include "Gettext.h"
 #include "Sale.h"
 
 #include <list>
@@ -48,7 +49,7 @@ public:
 	// variables, etc.
 	const std::string &Identifier() const;
 	// Get the planet's descriptive text.
-	const std::string &Description() const;
+	std::string Description() const;
 	// Get the landscape sprite.
 	const Sprite *Landscape() const;
 	// Get the name of the ambient audio to play on this planet.
@@ -65,7 +66,7 @@ public:
 	// jobs, banking, and hiring).
 	bool HasSpaceport() const;
 	// Get the spaceport's descriptive text.
-	const std::string &SpaceportDescription() const;
+	std::string SpaceportDescription() const;
 	
 	// Check if this planet is inhabited (i.e. it has a spaceport, and does not
 	// have the "uninhabited" attribute).
@@ -127,9 +128,9 @@ public:
 	
 private:
 	std::string name;
-	std::string displayName;
-	std::string description;
-	std::string spaceport;
+	Gettext::T_ displayName;
+	std::vector<Gettext::T_> description;
+	std::vector<Gettext::T_> spaceport;
 	const Sprite *landscape = nullptr;
 	std::string music;
 	

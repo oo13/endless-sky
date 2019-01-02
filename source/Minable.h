@@ -16,6 +16,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Body.h"
 
 #include "Angle.h"
+#include "Gettext.h"
 
 #include <list>
 #include <map>
@@ -69,8 +70,7 @@ public:
 	
 	
 private:
-	std::string name;
-	std::string displayName;
+	Gettext::T_ name;
 	// Current angular position relative to the focus of the elliptical orbit,
 	// in radians. An angle of zero is the periapsis point.
 	double theta;

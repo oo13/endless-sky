@@ -14,6 +14,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "Depreciation.h"
 #include "Format.h"
+#include "Gettext.h"
 #include "Outfit.h"
 #include "PlayerInfo.h"
 

@@ -13,21 +13,29 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #ifndef PHRASE_H_
 #define PHRASE_H_
 
+#include "DataNode.h"
+
 #include <functional>
 #include <string>
 #include <vector>
-
-class DataNode;
 
 
 
 // Class representing a set of rules for generating random ship names.
 class Phrase {
 public:
+	Phrase() = default;
+	Phrase(const Phrase &a) = delete;
+	Phrase &operator=(const Phrase &a) = delete;
+	~Phrase() noexcept;
+	
 	void Load(const DataNode &node);
 	
 	const std::string &Name() const;
 	std::string Get() const;
+	
+	// Parse all nodes.
+	void ParseAllNodes();
 	
 	
 private:
@@ -35,6 +43,9 @@ private:
 	
 	
 private:
+	// Parse one nodes.
+	void ParseNode(const DataNode &node);
+	
 	class Part {
 	public:
 		std::vector<std::string> words;
@@ -46,6 +57,9 @@ private:
 private:
 	std::string name;
 	std::vector<std::vector<Part>> parts;
+	
+	// Original data node.
+	std::vector<DataNode> originalNode;
 };
 
 

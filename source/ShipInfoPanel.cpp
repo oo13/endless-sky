@@ -18,10 +18,10 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FontSet.h"
 #include "Format.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Information.h"
 #include "Interface.h"
 #include "LineShader.h"
-#include "LocaleInfo.h"
 #include "LogbookPanel.h"
 #include "Messages.h"
 #include "MissionPanel.h"
@@ -345,7 +345,7 @@ void ShipInfoPanel::DrawOutfits(const Rectangle &bounds, Rectangle &cargoBounds)
 		}
 		
 		// Draw the category label.
-		table.Draw(LocaleInfo::TranslateCore(category), bright);
+		table.Draw(T(category), bright);
 		table.Advance();
 		for(const Outfit *outfit : it->second)
 		{
@@ -356,7 +356,7 @@ void ShipInfoPanel::DrawOutfits(const Rectangle &bounds, Rectangle &cargoBounds)
 				if(start.X() + WIDTH - 20 > bounds.Right())
 					break;
 				table.DrawAt(start);
-				table.Draw(LocaleInfo::TranslateCore(category), bright);
+				table.Draw(T(category), bright);
 				table.Advance();
 			}
 			
@@ -486,7 +486,7 @@ void ShipInfoPanel::DrawWeapons(const Rectangle &bounds)
 	if(draggingIndex >= 0)
 	{
 		const Outfit *outfit = ship.Weapons()[draggingIndex].GetOutfit();
-		string name = outfit ? outfit->Name() : "[empty]";
+		string name = outfit ? outfit->Name() : T("[empty]");
 		Point pos(hoverPoint.X() - .5 * font.Width(name), hoverPoint.Y());
 		font.Draw(name, pos + Point(1., 1.), Color(0., 1.));
 		font.Draw(name, pos, bright);

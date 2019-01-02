@@ -15,6 +15,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "ConditionSet.h"
 #include "Conversation.h"
+#include "Gettext.h"
 #include "LocationFilter.h"
 
 #include <map>
@@ -22,6 +23,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 class DataNode;
 class DataWriter;
@@ -69,10 +71,10 @@ private:
 	std::string system;
 	LocationFilter systemFilter;
 	
-	std::string logText;
-	std::map<std::string, std::map<std::string, std::string>> specialLogText;
+	std::vector<Gettext::T_> logText;
+	std::map<std::string, std::map<std::string, std::vector<Gettext::T_>>> specialLogText;
 	
-	std::string dialogText;
+	std::vector<Gettext::T_> dialogText;
 	
 	const Conversation *stockConversation = nullptr;
 	Conversation conversation;

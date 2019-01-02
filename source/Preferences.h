@@ -38,6 +38,11 @@ public:
 	static double ViewZoom();
 	static bool ZoomViewIn();
 	static bool ZoomViewOut();
+	
+	// Languages.
+	static void ToggleLanguage();
+	static std::string LanguageCode();
+	static std::string LanguagePreferenceName();
 };
 
 

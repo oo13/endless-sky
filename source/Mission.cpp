@@ -18,8 +18,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DistanceMap.h"
 #include "Format.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Government.h"
-#include "LocaleInfo.h"
 #include "Messages.h"
 #include "Planet.h"
 #include "PlayerInfo.h"
@@ -31,6 +31,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include <cmath>
 #include <functional>
+#include <set>
 #include <sstream>
 
 using namespace std;
@@ -47,7 +48,7 @@ namespace {
 		{
 			// For every 100 credits in profit you can make, double the chance
 			// of this commodity being chosen.
-			double profit = to.Trade(commodity.name) - from.Trade(commodity.name);
+			double profit = to.Trade(commodity.name.Original()) - from.Trade(commodity.name.Original());
 			int w = max<int>(1, 100. * pow(2., profit * .01));
 			weight.push_back(w);
 			total += w;
@@ -80,14 +81,14 @@ namespace {
 	Format::ListOfWords listOfWaypoints;
 	
 	// The Hook of translation.
-	function<void()> updateCoreTextdomain([](){
+	function<void()> updateCatalog([](){
 		// TRANSLATORS: The separators of stopovers.
 		listOfStopovers.SetSeparators(T(": and :, :, and ", "stopovers"));
 		// TRANSLATORS: The separators of waypoints.
 		listOfWaypoints.SetSeparators(T(": and :, :, and ", "waypoints"));
 	});
 	// Set the hook.
-	bool hooked = LocaleInfo::AddHookUpdatingCore(&updateCoreTextdomain);
+	bool hooked = AddHookUpdating(&updateCatalog);
 	
 	// Get a string of a stopover.
 	string GetStringOfStopover(set<const Planet *>::iterator it)
@@ -131,11 +132,11 @@ void Mission::Load(const DataNode &node)
 	for(const DataNode &child : node)
 	{
 		if(child.Token(0) == "name" && child.Size() >= 2)
-			displayName = LocaleInfo::TranslateData(child.Token(1), "mission");
+			displayName = T_(child.Token(1), "mission");
 		else if(child.Token(0) == "description" && child.Size() >= 2)
-			description = LocaleInfo::TranslateData(child.Token(1));
+			description = T_(child.Token(1));
 		else if(child.Token(0) == "blocked" && child.Size() >= 2)
-			blocked = LocaleInfo::TranslateData(child.Token(1));
+			blocked = T_(child.Token(1));
 		else if(child.Token(0) == "deadline" && child.Size() >= 4)
 			deadline = Date(child.Value(1), child.Value(2), child.Value(3));
 		else if(child.Token(0) == "deadline")
@@ -197,7 +198,7 @@ void Mission::Load(const DataNode &node)
 			repeat = (child.Size() == 1 ? 0 : static_cast<int>(child.Value(1)));
 		else if(child.Token(0) == "clearance")
 		{
-			clearance = (child.Size() == 1 ? "auto" : LocaleInfo::TranslateData(child.Token(1)));
+			clearance = (child.Size() == 1 ? Tx("auto") : T_(child.Token(1)));
 			clearanceFilter.Load(child);
 		}
 		else if(child.Token(0) == "infiltrating")
@@ -283,8 +284,8 @@ void Mission::Load(const DataNode &node)
 			child.PrintTrace("Skipping unrecognized attribute:");
 	}
 	
-	if(displayName.empty())
-		displayName = LocaleInfo::TranslateData(name, "mission");
+	if(displayName.Str().empty())
+		displayName = T_(name, "mission");
 }
 
 
@@ -296,11 +297,11 @@ void Mission::Save(DataWriter &out, const string &tag) const
 	out.Write(tag, name);
 	out.BeginChild();
 	{
-		out.Write("name", displayName);
-		if(!description.empty())
-			out.Write("description", description);
-		if(!blocked.empty())
-			out.Write("blocked", blocked);
+		out.Write("name", displayName.Str());
+		if(!description.Str().empty())
+			out.Write("description", description.Str());
+		if(!blocked.Str().empty())
+			out.Write("blocked", blocked.Str());
 		if(deadline)
 			out.Write("deadline", deadline.Day(), deadline.Month(), deadline.Year());
 		if(cargoSize)
@@ -327,9 +328,9 @@ void Mission::Save(DataWriter &out, const string &tag) const
 			out.Write("boarding");
 		if(location == JOB)
 			out.Write("job");
-		if(!clearance.empty())
+		if(!clearance.Str().empty())
 		{
-			out.Write("clearance", clearance);
+			out.Write("clearance", clearance.Str());
 			clearanceFilter.Save(out);
 		}
 		if(!hasFullClearance)
@@ -551,7 +552,7 @@ bool Mission::CheckDeadline(const Date &today)
 // Check if you have special clearance to land on your destination.
 bool Mission::HasClearance(const Planet *planet) const
 {
-	if(clearance.empty())
+	if(clearance.Str().empty())
 		return false;
 	if(planet == destination || stopovers.count(planet) || visitedStopovers.count(planet))
 		return true;
@@ -717,7 +718,7 @@ void Mission::Fail()
 // so that you do not display the same message multiple times.
 string Mission::BlockedMessage(const PlayerInfo &player)
 {
-	if(blocked.empty())
+	if(blocked.Str().empty())
 		return "";
 	
 	int extraCrew = 0;
@@ -759,7 +760,7 @@ string Mission::BlockedMessage(const PlayerInfo &player)
 	subs["<capacity>"] = out.str();
 	
 	string message = Format::Replace(blocked, subs);
-	blocked.clear();
+	blocked.Clear();
 	return message;
 }
 
@@ -965,7 +966,7 @@ Mission Mission::Instantiate(const PlayerInfo &player, const shared_ptr<Ship> &b
 	}
 	for(const LocationFilter &filter : stopoverFilters)
 	{
-		const Planet *planet = filter.PickPlanet(source, !clearance.empty());
+		const Planet *planet = filter.PickPlanet(source, !clearance.Str().empty());
 		if(!planet)
 			return result;
 		result.stopovers.insert(planet);
@@ -978,7 +979,7 @@ Mission Mission::Instantiate(const PlayerInfo &player, const shared_ptr<Ship> &b
 	result.destination = destination;
 	if(!result.destination && !destinationFilter.IsEmpty())
 	{
-		result.destination = destinationFilter.PickPlanet(source, !clearance.empty());
+		result.destination = destinationFilter.PickPlanet(source, !clearance.Str().empty());
 		if(!result.destination)
 			return result;
 	}
@@ -1002,22 +1003,22 @@ Mission Mission::Instantiate(const PlayerInfo &player, const shared_ptr<Ship> &b
 		else
 		{
 			for(const Trade::Commodity &option : GameData::Commodities())
-				if(option.name == cargo)
+				if(option.name.Original() == cargo)
 				{
 					commodity = &option;
 					break;
 				}
 			for(const Trade::Commodity &option : GameData::SpecialCommodities())
-				if(option.name == cargo)
+				if(option.name.Original() == cargo)
 				{
 					commodity = &option;
 					break;
 				}
 		}
 		if(commodity)
-			result.cargo = commodity->items[Random::Int(commodity->items.size())];
+			result.cargo = commodity->items[Random::Int(commodity->items.size())].Str();
 		else
-			result.cargo = LocaleInfo::TranslateData(cargo, "cargo");
+			result.cargo = T(cargo, "cargo");
 	}
 	// Pick a random cargo amount, if requested.
 	if(cargoSize || cargoLimit)
@@ -1136,10 +1137,10 @@ Mission Mission::Instantiate(const PlayerInfo &player, const shared_ptr<Ship> &b
 		result.genericOnEnter.emplace_back(action.Instantiate(subs, source, jumps, payload));
 	
 	// Perform substitution in the name and description.
-	result.displayName = Format::Replace(displayName, subs);
-	result.description = Format::Replace(description, subs);
-	result.clearance = Format::Replace(clearance, subs);
-	result.blocked = Format::Replace(blocked, subs);
+	result.displayName = Tx(Format::Replace(displayName, subs));
+	result.description = Tx(Format::Replace(description, subs));
+	result.clearance = Tx(Format::Replace(clearance, subs));
+	result.blocked = Tx(Format::Replace(blocked, subs));
 	result.clearanceFilter = clearanceFilter;
 	result.hasFullClearance = hasFullClearance;
 	
@@ -1181,7 +1182,7 @@ bool Mission::ParseContraband(const DataNode &node)
 	else if(node.Token(0) == "illegal" && node.Size() == 3)
 	{
 		illegalCargoFine = node.Value(1);
-		illegalCargoMessage = LocaleInfo::TranslateData(node.Token(2));
+		illegalCargoMessage = T(node.Token(2));
 	}
 	else if(node.Token(0) == "stealth")
 		failIfDiscovered = true;

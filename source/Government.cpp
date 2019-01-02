@@ -16,7 +16,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DataNode.h"
 #include "Fleet.h"
 #include "GameData.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
 #include "Phrase.h"
 #include "Politics.h"
 #include "ShipEvent.h"
@@ -24,6 +24,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <algorithm>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	unsigned nextID = 0;
@@ -51,10 +52,7 @@ Government::Government()
 void Government::Load(const DataNode &node)
 {
 	if(node.Size() >= 2)
-	{
-		name = node.Token(1);
-		displayName = LocaleInfo::TranslateData(name, "government");
-	}
+		name = T_(node.Token(1), "government");
 	
 	for(const DataNode &child : node)
 	{
@@ -137,7 +135,7 @@ void Government::Load(const DataNode &node)
 // Get the name of this government.
 const string &Government::GetName() const
 {
-	return displayName;
+	return name.Str();
 }
 
 
@@ -147,7 +145,7 @@ const string &Government::GetName() const
 // variables, etc.
 const std::string &Government::GetIdentifier() const
 {
-	return name;
+	return name.Original();
 }
 
 

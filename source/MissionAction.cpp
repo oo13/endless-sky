@@ -20,7 +20,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Format.h"
 #include "GameData.h"
 #include "GameEvent.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
 #include "Messages.h"
 #include "Outfit.h"
 #include "PlayerInfo.h"
@@ -162,20 +162,20 @@ void MissionAction::Load(const DataNode &node, const string &missionName)
 		if(key == "log" || key == "dialog")
 		{
 			bool isSpecial = (key == "log" && child.Size() >= 3);
-			string &text = (key == "dialog" ? dialogText :
+			vector<T_> &text = (key == "dialog" ? dialogText :
 				isSpecial ? specialLogText[child.Token(1)][child.Token(2)] : logText);
 			for(int i = isSpecial ? 3 : 1; i < child.Size(); ++i)
 			{
-				if(!text.empty())
-					text += "\n\t";
-				text += LocaleInfo::TranslateData(child.Token(i));
+				if(!IsEmptyText(text))
+					text.push_back(Tx("\n\t"));
+				text.emplace_back(child.Token(i));
 			}
 			for(const DataNode &grand : child)
 				for(int i = 0; i < grand.Size(); ++i)
 				{
-					if(!text.empty())
-						text += "\n\t";
-					text += LocaleInfo::TranslateData(grand.Token(i));
+					if(!IsEmptyText(text))
+						text.push_back(Tx("\n\t"));
+					text.emplace_back(grand.Token(i));
 				}
 		}
 		else if(key == "conversation" && child.HasChildren())
@@ -256,13 +256,13 @@ void MissionAction::Save(DataWriter &out) const
 			// LocationFilter indentation is handled by its Save method.
 			systemFilter.Save(out);
 		}
-		if(!logText.empty())
+		if(!IsEmptyText(logText))
 		{
 			out.Write("log");
 			out.BeginChild();
 			{
 				// Break the text up into paragraphs.
-				for(const string &line : Format::Split(logText, "\n\t"))
+				for(const string &line : Format::Split(Concat(logText), "\n\t"))
 					out.Write(line);
 			}
 			out.EndChild();
@@ -274,18 +274,18 @@ void MissionAction::Save(DataWriter &out) const
 				out.BeginChild();
 				{
 					// Break the text up into paragraphs.
-					for(const string &line : Format::Split(eit.second, "\n\t"))
+					for(const string &line : Format::Split(Concat(eit.second), "\n\t"))
 						out.Write(line);
 				}
 				out.EndChild();
 			}
-		if(!dialogText.empty())
+		if(!IsEmptyText(dialogText))
 		{
 			out.Write("dialog");
 			out.BeginChild();
 			{
 				// Break the text up into paragraphs.
-				for(const string &line : Format::Split(dialogText, "\n\t"))
+				for(const string &line : Format::Split(Concat(dialogText), "\n\t"))
 					out.Write(line);
 			}
 			out.EndChild();
@@ -406,14 +406,14 @@ void MissionAction::Do(PlayerInfo &player, UI *ui, const System *destination, co
 			panel->SetCallback(&player, &PlayerInfo::BasicCallback);
 		ui->Push(panel);
 	}
-	else if(!dialogText.empty() && ui)
+	else if(!IsEmptyText(dialogText) && ui)
 	{
 		map<string, string> subs;
 		subs["<first>"] = player.FirstName();
 		subs["<last>"] = player.LastName();
 		if(player.Flagship())
 			subs["<ship>"] = player.Flagship()->Name();
-		string text = Format::Replace(dialogText, subs);
+		const string text = Format::Replace(Concat(dialogText), subs);
 		
 		if(isOffer)
 			ui->Push(new Dialog(text, player, destination));
@@ -423,11 +423,11 @@ void MissionAction::Do(PlayerInfo &player, UI *ui, const System *destination, co
 	else if(isOffer && ui)
 		player.MissionCallback(Conversation::ACCEPT);
 	
-	if(!logText.empty())
-		player.AddLogEntry(logText);
+	if(!IsEmptyText(logText))
+		player.AddLogEntry(Concat(logText));
 	for(const auto &it : specialLogText)
 		for(const auto &eit : it.second)
-			player.AddSpecialLog(it.first, eit.first, eit.second);
+			player.AddSpecialLog(it.first, eit.first, Concat(eit.second));
 	
 	// If multiple outfits are being transferred, first remove them before
 	// adding any new ones.
@@ -488,14 +488,12 @@ MissionAction MissionAction::Instantiate(map<string, string> &subs, const System
 		subs["<payment>"] = Format::StringF({nT("%1% credit", "%1% credits", absPayment), Format::Credits(absPayment)});
 	}
 	
-	if(!logText.empty())
-		result.logText = Format::Replace(logText, subs);
+	result.logText = vector<T_>{Tx(Format::Replace(Concat(logText), subs))};
 	for(const auto &it : specialLogText)
 		for(const auto &eit : it.second)
-			result.specialLogText[it.first][eit.first] = Format::Replace(eit.second, subs);
+			result.specialLogText[it.first][eit.first] = vector<T_>{Tx(Format::Replace(Concat(eit.second), subs))};
 	
-	if(!dialogText.empty())
-		result.dialogText = Format::Replace(dialogText, subs);
+	result.dialogText = vector<T_>{Tx(Format::Replace(Concat(dialogText), subs))};
 	
 	if(stockConversation)
 		result.conversation = stockConversation->Substitute(subs);

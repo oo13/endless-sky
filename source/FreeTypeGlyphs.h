@@ -52,6 +52,7 @@ public:
 	virtual double Baseline() const override;
 	virtual size_t FindUnsupported(const std::string &str, size_t pos = 0) const override;
 	virtual void SetUpShader() override;
+	virtual void ClearCache() const override;
 	
 	
 private:

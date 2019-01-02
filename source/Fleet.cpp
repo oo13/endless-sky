@@ -469,7 +469,7 @@ void Fleet::SetCargo(Ship *ship) const
 			// random and then double-check that it's a valid commodity name.
 			const string &name = commodities[Random::Int(commodities.size())];
 			for(const auto &it : GameData::Commodities())
-				if(it.name == name)
+				if(it.name.Original() == name)
 				{
 					index = &it - &GameData::Commodities().front();
 					break;
@@ -478,7 +478,7 @@ void Fleet::SetCargo(Ship *ship) const
 		
 		const Trade::Commodity &commodity = GameData::Commodities()[index];
 		int amount = Random::Int(free) + 1;
-		ship->Cargo().Add(commodity.name, amount);
+		ship->Cargo().Add(commodity.name.Original(), amount);
 	}
 	int extraCrew = ship->Attributes().Get("bunks") - ship->RequiredCrew();
 	if(extraCrew > 0)

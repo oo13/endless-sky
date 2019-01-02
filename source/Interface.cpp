@@ -16,9 +16,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Font.h"
 #include "FontSet.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Information.h"
 #include "LineShader.h"
-#include "LocaleInfo.h"
 #include "OutlineShader.h"
 #include "Panel.h"
 #include "Rectangle.h"
@@ -33,6 +33,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <cmath>
 
 using namespace std;
+using namespace Gettext;
 
 namespace {
 	// Parse a set of tokens that specify horizontal and vertical alignment.
@@ -484,11 +485,10 @@ Interface::TextElement::TextElement(const DataNode &node, const Point &globalAnc
 	{
 		buttonKey = node.Token(1).front();
 		if(node.Size() >= 3)
-			str = node.Token(2);
+			str = T_(node.Token(2), "interface");
 	}
 	else
-		str = node.Token(1);
-	str = LocaleInfo::TranslateData(str, "interface");
+		str = T_(node.Token(1), "interface");
 	
 	// This function will call ParseLine() for any line it does not recognize.
 	Load(node, globalAnchor);
@@ -573,7 +573,7 @@ void Interface::TextElement::Place(const Rectangle &bounds, Panel *panel) const
 
 string Interface::TextElement::GetString(const Information &info) const
 {
-	return (isDynamic ? info.GetString(str) : str);
+	return (isDynamic ? info.GetString(str) : str.Str());
 }
 
 

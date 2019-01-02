@@ -32,6 +32,8 @@ class Sprite;
 // string to double significantly reduces access time.
 class Weapon {
 public:
+	virtual ~Weapon() noexcept;
+	
 	// Load from a "weapon" node, either in an outfit or in a ship (explosion).
 	void LoadWeapon(const DataNode &node);
 	bool IsWeapon() const;

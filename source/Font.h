@@ -15,6 +15,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "Cache.h"
 
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -32,7 +33,7 @@ class Font {
 public:
 	Font();
 	
-	bool Load(const DataNode &node);
+	bool Load(const DataNode &node, int size);
 	
 	void SetUpShader();
 	
@@ -48,7 +49,8 @@ public:
 	
 	int Space() const;
 	
-	int Size() const;
+	// Set font priorities and reference font.
+	void SetFontPriority(const std::vector<std::string> &priorityList, const std::string &referenece);
 	
 	static void ShowUnderlines(bool show);
 	static bool ShowUnderlines();
@@ -110,19 +112,25 @@ public:
 		
 		// Set up the shader that will draw the text. Called after the window is set up.
 		virtual void SetUpShader() = 0;
+		
+		// Clear all caches().
+		virtual void ClearCache() const = 0;
 	};
 	
 	// A mapped value for drawCache.
 	// A text will draw with source[sourceNumber].
 	struct DrawnData {
 		std::string text;
-		size_t sourceNumber;
+		size_t priorityNumber;
 		double width;
 		
-		DrawnData(const std::string &t, size_t s, double w)
-			: text(t), sourceNumber(s), width(w)
+		DrawnData(const std::string &t, size_t pn, double w)
+			: text(t), priorityNumber(pn), width(w)
 		{}
 	};
+	
+	// Clear all caches.
+	void ClearCache() const;
 	
 private:
 	// Prepare a string for processing by multiple sources, producing source-end pairs.
@@ -131,8 +139,9 @@ private:
 	
 private:
 	std::vector<std::shared_ptr<IGlyphs> > sources;
-	int size;
-	int heightOverride;
+	std::map<std::string, std::size_t> fontName;
+	std::vector<IGlyphs*> preferedFont;
+	IGlyphs* referenceFont;
 	mutable Cache<std::string, double, true> widthCache;
 	mutable Cache<std::string, std::vector<DrawnData>, true> drawCache;
 };

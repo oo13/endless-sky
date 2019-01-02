@@ -18,6 +18,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FontSet.h"
 #include "Format.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Phrase.h"
 #include "Planet.h"
 #include "PlayerInfo.h"
@@ -76,12 +77,12 @@ namespace {
 	Format::ListOfWords listOfShips;
 	
 	// The Hook of translation.
-	function<void()> updateCoreTextdomain([](){
+	function<void()> updateCatalog([](){
 		// TRANSLATORS: The separators of ships
 		listOfShips.SetSeparators(T(": and :,\n:,\nand "));
 	});
 	// Set the hook.
-	bool hooked = LocaleInfo::AddHookUpdatingCore(&updateCoreTextdomain);
+	bool hooked = AddHookUpdating(&updateCatalog);
 }
 
 

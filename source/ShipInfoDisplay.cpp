@@ -17,7 +17,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FillShader.h"
 #include "Format.h"
 #include "GameData.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
 #include "Outfit.h"
 #include "Ship.h"
 #include "Table.h"
@@ -88,7 +88,7 @@ void ShipInfoDisplay::DrawAttributes(const Point &topLeft) const
 	for(unsigned i = 0; i < tableLabels.size(); ++i)
 	{
 		CheckHover(table, tableLabels[i]);
-		table.Draw(LocaleInfo::TranslateData(tableLabels[i], "Label of Attribute"), labelColor);
+		table.Draw(T(tableLabels[i], "Label of Attribute"), labelColor);
 		table.Draw(energyTable[i], valueColor);
 		table.Draw(heatTable[i], valueColor);
 	}
@@ -131,7 +131,7 @@ void ShipInfoDisplay::UpdateAttributes(const Ship &ship, const Depreciation &dep
 	{
 		// Special case: Non fixed texts are translated here and replaced their
 		// tooltip keys in GameData::Tooltip().
-		const string costPersent = Format::StringF({LocaleInfo::TranslateCore("cost (%1%%):"), to_string((100 * depreciated) / fullCost)});
+		const string costPersent = Format::StringF({T("cost (%1%%):"), to_string((100 * depreciated) / fullCost)});
 		attributeLabels.push_back(costPersent);
 	}
 	attributeValues.push_back(Format::Credits(depreciated));

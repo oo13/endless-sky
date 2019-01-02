@@ -12,8 +12,10 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "FontSet.h"
 
+#include "DataNode.h"
 #include "Font.h"
 
+#include <cmath>
 #include <utility>
 #include <map>
 
@@ -27,9 +29,24 @@ namespace {
 
 void FontSet::Load(const DataNode &node)
 {
-	Font font;
-	if(font.Load(node))
-		fonts[font.Size()] = move(font);
+	if(node.Token(0) != "font")
+	{
+		node.PrintTrace("Not a font node:");
+		return;
+	}
+	if(node.Size() != 2)
+	{
+		node.PrintTrace("Must have one font size:");
+		return;
+		
+	}
+	int size = round(node.Value(1));
+	if(size <= 0)
+	{
+		node.PrintTrace("Invalid font size:");
+	}
+	
+	fonts[size].Load(node, size);
 }
 
 
@@ -45,4 +62,13 @@ void FontSet::SetUpShaders()
 const Font &FontSet::Get(int size)
 {
 	return fonts[size];
+}
+
+
+
+void FontSet::SetFontPriority(std::function<const std::vector<std::string>&(int)> priorityFunc,
+	std::function<const std::string&(int)> referenceFunc)
+{
+	for(auto &it : fonts)
+		it.second.SetFontPriority(priorityFunc(it.first), referenceFunc(it.first));
 }

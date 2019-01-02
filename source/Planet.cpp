@@ -15,8 +15,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DataNode.h"
 #include "Format.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Government.h"
-#include "LocaleInfo.h"
 #include "PlayerInfo.h"
 #include "Politics.h"
 #include "Random.h"
@@ -26,6 +26,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "System.h"
 
 #include <algorithm>
+#include <set>
 
 using namespace std;
 using namespace Gettext;
@@ -43,7 +44,7 @@ void Planet::Load(const DataNode &node, const Set<Sale<Ship>> &ships, const Set<
 	if(node.Size() < 2)
 		return;
 	name = node.Token(1);
-	displayName = LocaleInfo::TranslateData(name, "planet");
+	displayName = T_(name, "planet");
 	
 	// If this planet has been loaded before, these sets of items should be
 	// reset instead of appending to them:
@@ -150,11 +151,11 @@ void Planet::Load(const DataNode &node, const Set<Sale<Ship>> &ships, const Set<
 			music = value;
 		else if(key == "description" || key == "spaceport")
 		{
-			string &text = (key == "description") ? description : spaceport;
-			if(!text.empty() && !value.empty() && value[0] > ' ')
-				text += '\t';
-			text += LocaleInfo::TranslateData(value);
-			text += '\n';
+			vector<T_> &text = (key == "description") ? description : spaceport;
+			if(!IsEmptyText(text) && !value.empty() && static_cast<unsigned char>(value[0]) > ' ')
+				text.push_back(Tx("\t"));
+			text.emplace_back(value);
+			text.push_back(Tx("\n"));
 		}
 		else if(key == "government")
 			government = GameData::Governments().Get(value);
@@ -199,7 +200,7 @@ void Planet::Load(const DataNode &node, const Set<Sale<Ship>> &ships, const Set<
 	}
 	
 	static const vector<string> AUTO_ATTRIBUTES = {"spaceport", "shipyard", "outfitter"};
-	bool autoValues[3] = {!spaceport.empty(), !shipSales.empty(), !outfitSales.empty()};
+	bool autoValues[3] = {!IsEmptyText(spaceport), !shipSales.empty(), !outfitSales.empty()};
 	for(unsigned i = 0; i < AUTO_ATTRIBUTES.size(); ++i)
 	{
 		if(autoValues[i])
@@ -235,9 +236,9 @@ const string &Planet::Identifier() const
 
 
 // Get the planet's descriptive text.
-const string &Planet::Description() const
+string Planet::Description() const
 {
-	return description;
+	return Concat(description);
 }
 
 
@@ -286,15 +287,15 @@ string Planet::Noun() const
 // jobs, banking, and hiring).
 bool Planet::HasSpaceport() const
 {
-	return !spaceport.empty();
+	return !IsEmptyText(spaceport);
 }
 
 
 
 // Get the spaceport's descriptive text.
-const string &Planet::SpaceportDescription() const
+string Planet::SpaceportDescription() const
 {
-	return spaceport;
+	return Concat(spaceport);
 }
 
 
@@ -520,7 +521,7 @@ void Planet::Bribe(bool fullAccess) const
 // Demand tribute, and get the planet's response.
 string Planet::DemandTribute(PlayerInfo &player) const
 {
-	if(player.GetCondition("tribute: " + displayName))
+	if(player.GetCondition("tribute: " + name))
 		return T("We are already paying you as much as we can afford.");
 	if(!tribute || defenseFleets.empty())
 		return T("Please don't joke about that sort of thing.");

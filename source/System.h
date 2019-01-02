@@ -13,6 +13,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #ifndef SYSTEM_H_
 #define SYSTEM_H_
 
+#include "Gettext.h"
 #include "Point.h"
 #include "Set.h"
 #include "StellarObject.h"
@@ -167,7 +168,7 @@ private:
 private:
 	// Name and position (within the star map) of this system.
 	std::string name;
-	std::string displayName;
+	Gettext::T_ displayName;
 	Point position;
 	const Government *government = nullptr;
 	std::string music;

@@ -19,9 +19,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Font.h"
 #include "FontSet.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Information.h"
 #include "Interface.h"
-#include "LocaleInfo.h"
 #include "Preferences.h"
 #include "Screen.h"
 #include "Sprite.h"
@@ -54,6 +54,7 @@ namespace {
 	const string REACTIVATE_HELP = G("Reactivate first-time help");
 	const string SCROLL_SPEED = G("Scroll speed");
 	const string FIGHTER_REPAIR = G("Repair fighters in");
+	const string LANGUAGE = G("Language");
 }
 
 
@@ -187,6 +188,8 @@ bool PreferencesPanel::Click(int x, int y, int clicks)
 					speed = 20;
 				Preferences::SetScrollSpeed(speed);
 			}
+			if(zone.Value() == LANGUAGE)
+				Preferences::ToggleLanguage();
 			else
 				Preferences::Set(zone.Value(), !Preferences::Has(zone.Value()));
 			break;
@@ -450,7 +453,8 @@ void PreferencesPanel::DrawSettings()
 		G("Rehire extra crew when lost"),
 		SCROLL_SPEED,
 		G("Show escort systems on map"),
-		G("Warning siren")
+		G("Warning siren"),
+		LANGUAGE
 	};
 	bool isCategory = true;
 	for(const string &setting : SETTINGS)
@@ -507,7 +511,7 @@ void PreferencesPanel::DrawSettings()
 		else if(setting == REACTIVATE_HELP)
 		{
 			// Check how many help messages have been displayed.
-			const map<string, string> &help = GameData::HelpTemplates();
+			const map<string, vector<T_>> &help = GameData::HelpTemplates();
 			int shown = 0;
 			int total = 0;
 			for(const auto &it : help)
@@ -539,6 +543,11 @@ void PreferencesPanel::DrawSettings()
 		{
 			isOn = true;
 			text = to_string(Preferences::ScrollSpeed());
+		}
+		else if(setting == LANGUAGE)
+		{
+			isOn = true;
+			text = Preferences::LanguagePreferenceName();
 		}
 		else
 			text = isOn ? T("on") : T("off");

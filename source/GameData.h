@@ -46,6 +46,9 @@ class Sprite;
 class StarField;
 class StartConditions;
 class System;
+namespace Gettext {
+	class T_;
+}
 
 
 
@@ -133,11 +136,11 @@ public:
 	static const StarField &Background();
 	static void SetHaze(const Sprite *sprite);
 	
-	static const std::string &Tooltip(const std::string &label);
+	static std::string Tooltip(const std::string &label);
 	static std::string HelpMessage(const std::string &name);
-	static const std::map<std::string, std::string> &HelpTemplates();
+	static const std::map<std::string, std::vector<Gettext::T_>> &HelpTemplates();
 	
-	static const std::map<std::string, std::string> &PluginAboutText();
+	static const std::map<std::string, Gettext::T_> &PluginAboutText();
 	
 private:
 	static void LoadSources();

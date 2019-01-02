@@ -13,6 +13,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #ifndef MORTGAGE_H_
 #define MORTGAGE_H_
 
+#include "Gettext.h"
+
 #include <string>
 
 class DataNode;
@@ -71,8 +73,7 @@ public:
 	
 private:
 	// Note: once a mortgage is set up, only the principal and term will change.
-	std::string type;
-	mutable std::string typeName;
+	Gettext::T_ type;
 	int64_t principal;
 	double interest;
 	std::string interestString;

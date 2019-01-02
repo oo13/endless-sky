@@ -19,7 +19,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Armament.h"
 #include "CargoHold.h"
 #include "Command.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
 #include "Outfit.h"
 #include "Personality.h"
 #include "Point.h"
@@ -134,7 +134,7 @@ public:
 	// Get the generic noun (e.g. "ship") to be used when describing this ship.
 	const std::string &Noun() const;
 	// Get this ship's description.
-	const std::string &Description() const;
+	std::string Description() const;
 	// Get the shipyard thumbnail for this ship.
 	const Sprite *Thumbnail() const;
 	// Get this ship's cost.
@@ -411,11 +411,11 @@ private:
 	const Ship *base = nullptr;
 	std::string modelName;
 	std::string pluralModelName;
-	std::string noun;
-	std::string description;
+	Gettext::T_ noun;
+	std::vector<Gettext::T_> description;
 	const Sprite *thumbnail = nullptr;
 	// Characteristics of this particular ship:
-	std::string name;
+	Gettext::T_ name;
 	bool canBeCarried = false;
 	
 	int forget = 0;

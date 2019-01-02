@@ -13,8 +13,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "StellarObject.h"
 
 #include "GameData.h"
+#include "Gettext.h"
 #include "Government.h"
-#include "LocaleInfo.h"
 #include "Planet.h"
 #include "Politics.h"
 #include "Radar.h"

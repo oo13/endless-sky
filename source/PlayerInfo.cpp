@@ -20,9 +20,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Files.h"
 #include "Format.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Government.h"
 #include "Hardpoint.h"
-#include "LocaleInfo.h"
 #include "Messages.h"
 #include "Mission.h"
 #include "Outfit.h"
@@ -116,8 +116,8 @@ void PlayerInfo::Load(const string &path)
 {
 	// Make sure any previously loaded data is cleared.
 	Clear();
-	// Avoid translations over again.
-	LocaleInfo::StopTranslatingData();
+	// Avoid to translate a saved game file.
+	StopTranslating();
 	
 	filePath = path;
 	DataFile file(path);
@@ -272,7 +272,7 @@ void PlayerInfo::Load(const string &path)
 			}
 		}
 	}
-	LocaleInfo::RestartTranslatingData();
+	RestartTranslating();
 	
 	// Based on the ships that were loaded, calculate the player's capacity for
 	// cargo and passengers.

@@ -18,7 +18,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FontSet.h"
 #include "Format.h"
 #include "GameData.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
 #include "PlayerInfo.h"
 #include "Preferences.h"
 #include "Screen.h"
@@ -123,7 +123,7 @@ void LogbookPanel::Draw()
 		if(dates[i])
 			font.Draw(contents[i], pos + textOffset, medium);
 		else
-			font.Draw(LocaleInfo::TranslateData(contents[i], "log"), pos + textOffset, bright);
+			font.Draw(T(contents[i], "log"), pos + textOffset, bright);
 		pos.Y() += LINE_HEIGHT;
 	}
 	
@@ -155,7 +155,7 @@ void LogbookPanel::Draw()
 	{
 		for(const auto &it : pit->second)
 		{
-			font.Draw(LocaleInfo::TranslateData(it.first, "log"), pos + textOffset, bright);
+			font.Draw(T(it.first, "log"), pos + textOffset, bright);
 			pos.Y() += LINE_HEIGHT;
 		
 			wrap.Wrap(it.second);

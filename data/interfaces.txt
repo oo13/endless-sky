@@ -102,13 +102,16 @@ color "map unused wormhole" .165 .066 .3 .333
 
 
 
-font
-	size 14
+font 14
 	atlas "images/font/ubuntu14r.png"
 
-font
-	size 18
+font 18
 	atlas "images/font/ubuntu18r.png"
+
+
+
+language en
+	name "English"
 
 
 

@@ -15,6 +15,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "Conversation.h"
 #include "Fleet.h"
+#include "Gettext.h"
 #include "LocationFilter.h"
 #include "Personality.h"
 
@@ -22,6 +23,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <list>
 #include <map>
 #include <memory>
+#include <vector>
 
 class DataNode;
 class DataWriter;
@@ -75,7 +77,7 @@ private:
 	bool isAtDestination = false;
 	
 	// Dialog or conversation to show when all requirements for this NPC are met:
-	std::string dialogText;
+	std::vector<Gettext::T_> dialogText;
 	Conversation conversation;
 	const Conversation *stockConversation = nullptr;
 	
@@ -83,7 +85,7 @@ private:
 	// be customized or just refer to stock objects:
 	std::list<std::shared_ptr<Ship>> ships;
 	std::list<const Ship *> stockShips;
-	std::list<std::string> shipNames;
+	std::list<Gettext::T_> shipNames;
 	std::list<Fleet> fleets;
 	std::list<const Fleet *> stockFleets;
 	

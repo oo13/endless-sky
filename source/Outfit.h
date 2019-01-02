@@ -13,10 +13,10 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #ifndef OUTFIT_H_
 #define OUTFIT_H_
 
-#include "LocaleInfo.h"
 #include "Weapon.h"
 
 #include "Dictionary.h"
+#include "Gettext.h"
 
 #include <map>
 #include <string>
@@ -56,7 +56,7 @@ public:
 	const std::string &Identifier() const;
 	
 	const std::string &Category() const;
-	const std::string &Description() const;
+	std::string Description() const;
 	int64_t Cost() const;
 	double Mass() const;
 	// Get the licenses needed to buy or operate this ship.
@@ -92,7 +92,7 @@ private:
 	std::string name;
 	std::string pluralName;
 	std::string category;
-	std::string description;
+	std::vector<Gettext::T_> description;
 	const Sprite *thumbnail = nullptr;
 	int64_t cost = 0;
 	double mass = 0.;

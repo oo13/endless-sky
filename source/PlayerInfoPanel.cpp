@@ -17,9 +17,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FontSet.h"
 #include "Format.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Information.h"
 #include "Interface.h"
-#include "LocaleInfo.h"
 #include "LogbookPanel.h"
 #include "MissionPanel.h"
 #include "Planet.h"
@@ -527,7 +527,7 @@ void PlayerInfoPanel::DrawPlayer(const Rectangle &bounds)
 		table.Draw("(-" + Format::Decimal(deterrenceLevel, 1) + ")", dim);
 	}
 	// Other special information:
-	auto ConditionNameOfSalary = [](const string &s) -> string { return LocaleInfo::TranslateData(s, "salary: "); };
+	auto ConditionNameOfSalary = [](const string &s) -> string { return T(s, "salary: "); };
 	auto salary = Match(player, "salary: ", "", ConditionNameOfSalary);
 	sort(salary.begin(), salary.end());
 	DrawList(salary, table, T("salary:"), 4);
@@ -538,7 +538,7 @@ void PlayerInfoPanel::DrawPlayer(const Rectangle &bounds)
 	DrawList(tribute, table, T("tribute:"), 4);
 	
 	int maxRows = static_cast<int>(250. - 30. - table.GetPoint().Y()) / 20;
-	auto ConditionNameOfLicense = [](const string &s) -> string { return LocaleInfo::TranslateData(s, "license: "); };
+	auto ConditionNameOfLicense = [](const string &s) -> string { return T(s, "license: "); };
 	auto licenses = Match(player, "license: ", " License", ConditionNameOfLicense);
 	DrawList(licenses, table, T("licenses:"), maxRows, false);
 }

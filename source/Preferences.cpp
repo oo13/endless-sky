@@ -17,11 +17,13 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "DataNode.h"
 #include "DataWriter.h"
 #include "Files.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
+#include "Languages.h"
 #include "Screen.h"
 
 #include <algorithm>
 #include <map>
+#include <utility>
 
 using namespace std;
 using namespace Gettext;
@@ -72,6 +74,8 @@ void Preferences::Load()
 			scrollSpeed = node.Value(1);
 		else if(node.Token(0) == "view zoom")
 			zoomIndex = node.Value(1);
+		else if(node.Token(0) == "language" && node.Size() >= 2)
+			Languages::SetInitialPreferenceLanguage(node.Token(1));
 		else
 			settings[node.Token(0)] = (node.Size() == 1 || node.Value(1));
 	}
@@ -88,6 +92,7 @@ void Preferences::Save()
 	out.Write("zoom", Screen::Zoom());
 	out.Write("scroll speed", scrollSpeed);
 	out.Write("view zoom", zoomIndex);
+	out.Write("language", Languages::LanguageCode());
 	
 	for(const auto &it : settings)
 		out.Write(it.first, it.second);
@@ -168,4 +173,25 @@ bool Preferences::ZoomViewOut()
 	
 	--zoomIndex;
 	return true;
+}
+
+
+
+void Preferences::ToggleLanguage()
+{
+	Languages::ToggleLanguage();
+}
+
+
+
+string Preferences::LanguageCode()
+{
+	return Languages::LanguageCode();
+}
+
+
+
+string Preferences::LanguagePreferenceName()
+{
+	return Languages::PreferenceName();
 }

@@ -17,7 +17,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FontSet.h"
 #include "Format.h"
 #include "GameData.h"
-#include "LocaleInfo.h"
+#include "Gettext.h"
 #include "Screen.h"
 #include "Table.h"
 
@@ -41,12 +41,12 @@ namespace {
 	Format::ListOfWords listOfLicenses;
 
 	// The Hook of translation.
-	function<void()> updateCoreTextdomain([](){
+	function<void()> updateCatalog([](){
 		// TRANSLATORS: The Separators of licenses.
 		listOfLicenses.SetSeparators(T(": and :, :, and ", "ItemInfoDisplay"));
 	});
 	// Set the hook.
-	bool hooked = LocaleInfo::AddHookUpdatingCore(&updateCoreTextdomain);
+	bool hooked = AddHookUpdating(&updateCatalog);
 	
 	
 	
@@ -60,8 +60,9 @@ namespace {
 				isVowel = true;
 				break;
 			}
+		const string postfix(" License");
 		return Format::StringF({licenseFormat, indefiniteArticle[isVowel],
-			LocaleInfo::TranslateData((*it) + " License", "license: ")});
+			T((*it) + postfix, "license: ")});
 	}
 }
 
@@ -206,8 +207,7 @@ Point ItemInfoDisplay::Draw(Point point, const vector<string> &labels, const vec
 		}
 		
 		CheckHover(table, labels[i]);
-		table.Draw(LocaleInfo::TranslateData(labels[i], "Label of Attribute"),
-			values[i].empty() ? valueColor : labelColor);
+		table.Draw(T(labels[i], "Label of Attribute"), values[i].empty() ? valueColor : labelColor);
 		table.Draw(T(values[i]), valueColor);
 	}
 	return table.GetPoint();

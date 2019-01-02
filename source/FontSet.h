@@ -13,7 +13,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #ifndef FONT_SET_H_
 #define FONT_SET_H_
 
+#include <functional>
 #include <string>
+#include <vector>
 
 class DataNode;
 class Font;
@@ -27,6 +29,10 @@ public:
 	static void Load(const DataNode &node);
 	static void SetUpShaders();
 	static const Font &Get(int size);
+	
+	// Set font priorities and reference font.
+	static void SetFontPriority(std::function<const std::vector<std::string>&(int)> priorityFunc,
+		std::function<const std::string&(int)> referenceFunc);
 };
 
 

@@ -16,8 +16,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "FontSet.h"
 #include "Format.h"
 #include "GameData.h"
+#include "Gettext.h"
 #include "Interface.h"
-#include "LocaleInfo.h"
 #include "News.h"
 #include "Planet.h"
 #include "PlayerInfo.h"
@@ -30,7 +30,7 @@ using namespace Gettext;
 
 
 SpaceportPanel::SpaceportPanel(PlayerInfo &player)
-	: player(player)
+	: player(player), updateCatalog([this](){ UpdateTranslation(); })
 {
 	SetTrapAllEvents(false);
 	
@@ -38,12 +38,20 @@ SpaceportPanel::SpaceportPanel(PlayerInfo &player)
 	text.SetAlignment(WrappedText::JUSTIFIED);
 	text.SetWrapWidth(480);
 	text.Wrap(player.GetPlanet()->SpaceportDescription());
+	AddHookUpdating(&updateCatalog);
 	
 	// Query the news interface to find out the wrap width.
 	// TODO: Allow Interface to handle wrapped text directly.
 	const Interface *interface = GameData::Interfaces().Get("news");
 	newsMessage.SetWrapWidth(interface->GetBox("message").Width());
 	newsMessage.SetFont(FontSet::Get(14));
+}
+
+
+
+SpaceportPanel::~SpaceportPanel()
+{
+	RemoveHookUpdating(&updateCatalog);
 }
 
 
@@ -96,4 +104,11 @@ void SpaceportPanel::Draw()
 		interface->Draw(newsInfo);
 		newsMessage.Draw(interface->GetBox("message").TopLeft(), *GameData::Colors().Get("medium"));
 	}
+}
+
+
+
+void SpaceportPanel::UpdateTranslation()
+{
+	text.Wrap(player.GetPlanet()->SpaceportDescription());
 }

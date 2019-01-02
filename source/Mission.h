@@ -15,6 +15,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 #include "ConditionSet.h"
 #include "Date.h"
+#include "Gettext.h"
 #include "LocationFilter.h"
 #include "MissionAction.h"
 #include "NPC.h"
@@ -156,9 +157,9 @@ private:
 	
 private:
 	std::string name;
-	std::string displayName;
-	std::string description;
-	std::string blocked;
+	Gettext::T_ displayName;
+	Gettext::T_ description;
+	Gettext::T_ blocked;
 	Location location = SPACEPORT;
 	
 	bool hasFailed = false;
@@ -169,7 +170,7 @@ private:
 	Date deadline;
 	int deadlineBase = 0;
 	int deadlineMultiplier = 0;
-	std::string clearance;
+	Gettext::T_ clearance;
 	LocationFilter clearanceFilter;
 	bool hasFullClearance = true;
 	
