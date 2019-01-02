@@ -573,11 +573,12 @@ FreeTypeGlyphs::RenderedText &FreeTypeGlyphs::Render(const string &str, double x
 	
 	// Try to reuse an old texture.
 	GLuint texture = 0;
-	for(auto it = cache.begin(); !texture && it != cache.end(); ++it)
+	for(auto it = cache.begin(); it != cache.end(); ++it)
 		if(chrono::duration_cast<chrono::minutes>(timestamp - it->second.timestamp).count() >= 1)
 		{
 			texture = it->second.texture;
 			it = cache.erase(it);
+			break;
 		}
 	
 	// Record rendered text.

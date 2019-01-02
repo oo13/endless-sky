@@ -20,6 +20,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Point.h"
 
 #include <algorithm>
+#include <cmath>
 
 using namespace std;
 
@@ -69,7 +70,7 @@ namespace {
 
 
 Font::Font()
-	: size(0)
+	: size(0), heightOverride(0)
 {
 }
 
@@ -87,10 +88,13 @@ bool Font::Load(const DataNode &node)
 		return false;
 	}
 	
-	// Get size.
+	// Get size and height.
 	size = 0;
+	heightOverride = 0;
 	for(const DataNode &child : node)
 	{
+		if(child.Token(0) == "height override")
+			heightOverride = round(child.Value(1));
 		if(child.Token(0) != "size")
 			continue;
 		
@@ -330,7 +334,10 @@ int Font::Height() const
 	if(sources.empty())
 		return 0;
 	
-	return ceil(sources[0]->LineHeight());
+	if(heightOverride > 0)
+		return heightOverride;
+	else
+		return ceil(sources[0]->LineHeight());
 }
 
 
@@ -505,12 +512,13 @@ vector<pair<size_t,size_t>> Font::Prepare(const std::string &str) const
 			size_t end = sources[i]->FindUnsupported(str, start);
 			if(end == start)
 				continue;
+			const size_t next = i == 0 ? end : NextCodePoint(str, start);
 			if(!sections.empty() && sections.back().first == i)
-				sections.back().second = end;
+				sections.back().second = next;
 			else
-				sections.emplace_back(i, end);
+				sections.emplace_back(i, next);
 			isUnsupported = false;
-			start = end;
+			start = next;
 			break;
 		}
 		
