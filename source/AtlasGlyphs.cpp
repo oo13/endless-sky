@@ -392,9 +392,6 @@ void AtlasGlyphs::SetUpShader()
 	screenWidth = 0;
 	screenHeight = 0;
 	
-	// The texture always comes from texture unit 0.
-	glUniform1i(shader.Uniform("tex"), 0);
-
 	colorI = shader.Uniform("color");
 	scaleI = shader.Uniform("scale");
 	glyphI = shader.Uniform("glyph");

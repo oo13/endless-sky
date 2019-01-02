@@ -15,6 +15,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Audio.h"
 #include "Effect.h"
 #include "FillShader.h"
+#include "Fleet.h"
+#include "Flotsam.h"
 #include "Font.h"
 #include "FontSet.h"
 #include "Format.h"
@@ -25,22 +27,31 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "MapPanel.h"
 #include "Mask.h"
 #include "Messages.h"
+#include "Minable.h"
+#include "Mission.h"
+#include "NPC.h"
 #include "OutlineShader.h"
 #include "Person.h"
 #include "Planet.h"
+#include "PlanetLabel.h"
 #include "PlayerInfo.h"
 #include "Politics.h"
 #include "PointerShader.h"
 #include "Preferences.h"
+#include "Projectile.h"
 #include "Random.h"
 #include "RingShader.h"
 #include "Screen.h"
+#include "Ship.h"
+#include "ShipEvent.h"
 #include "Sprite.h"
 #include "SpriteSet.h"
 #include "SpriteShader.h"
 #include "StarField.h"
 #include "StartConditions.h"
+#include "StellarObject.h"
 #include "System.h"
+#include "Visual.h"
 #include "WrappedText.h"
 
 #include <algorithm>
@@ -217,87 +228,21 @@ Engine::~Engine()
 void Engine::Place()
 {
 	ships.clear();
+	ai.ClearOrders();
 	
 	EnterSystem();
-	auto it = ships.end();
 	
 	// Add the player's flagship and escorts to the list of ships. The TakeOff()
 	// code already took care of loading up fighters and assigning parents.
 	for(const shared_ptr<Ship> &ship : player.Ships())
 		if(!ship->IsParked() && ship->GetSystem())
-		{
 			ships.push_back(ship);
-			if(it == ships.end())
-				--it;
-		}
 	
 	// Add NPCs to the list of ships. Fighters have to be assigned to carriers,
 	// and all but "uninterested" ships should follow the player.
 	shared_ptr<Ship> flagship = player.FlagshipPtr();
 	for(const Mission &mission : player.Missions())
-		for(const NPC &npc : mission.NPCs())
-		{
-			map<Ship *, int> droneCarriers;
-			map<Ship *, int> fighterCarriers;
-			for(const shared_ptr<Ship> &ship : npc.Ships())
-			{
-				// Skip ships that have been destroyed.
-				if(ship->IsDestroyed() || ship->IsDisabled())
-					continue;
-				
-				if(ship->BaysFree(false))
-					droneCarriers[&*ship] = ship->BaysFree(false);
-				if(ship->BaysFree(true))
-					fighterCarriers[&*ship] = ship->BaysFree(true);
-				// Redo the loading up of fighters.
-				ship->UnloadBays();
-			}
-			
-			shared_ptr<Ship> npcFlagship;
-			for(const shared_ptr<Ship> &ship : npc.Ships())
-			{
-				// Skip ships that have been destroyed.
-				if(ship->IsDestroyed())
-					continue;
-				
-				// Avoid the exploit where the player can wear down an NPC's
-				// crew by attrition over the course of many days.
-				ship->AddCrew(max(0, ship->RequiredCrew() - ship->Crew()));
-				if(!ship->IsDisabled())
-					ship->Recharge();
-				
-				if(ship->CanBeCarried())
-				{
-					bool docked = false;
-					map<Ship *, int> &carriers = (ship->Attributes().Category() == "Drone") ?
-						droneCarriers : fighterCarriers;
-					for(auto &it : carriers)
-						if(it.second && it.first->Carry(ship))
-						{
-							--it.second;
-							docked = true;
-							break;
-						}
-					if(docked)
-						continue;
-				}
-				
-				ships.push_back(ship);
-				// The first (alive) ship in an NPC block
-				// serves as the flagship of the group.
-				if(!npcFlagship)
-					npcFlagship = ship;
-				
-				// Only the flagship of an NPC considers the
-				// player: the rest of the NPC track it.
-				if(npcFlagship && ship != npcFlagship)
-					ship->SetParent(npcFlagship);
-				else if(!ship->GetPersonality().IsUninterested())
-					ship->SetParent(flagship);
-				else
-					ship->SetParent(nullptr);
-			}
-		}
+		Place(mission.NPCs(), flagship);
 	
 	// Get the coordinates of the planet the player is leaving.
 	Point planetPos;
@@ -309,13 +254,9 @@ void Engine::Place()
 		planetRadius = object->Radius();
 	}
 	
-	// Give each ship a random heading and position. The iterator points to the
-	// first ship that was an escort or NPC (i.e. the first ship after any
-	// fleets that were placed starting out in this system).
-	while(it != ships.end())
+	// Give each special ship we just added a random heading and position.
+	for (const shared_ptr<Ship> &ship : ships)
 	{
-		const shared_ptr<Ship> &ship = *it++;
-		
 		Point pos;
 		Angle angle = Angle::Random(360.);
 		Point velocity = angle.Unit();
@@ -324,10 +265,11 @@ void Engine::Place()
 		bool isHere = (ship->GetSystem() == player.GetSystem());
 		if(isHere)
 			pos = planetPos;
-		// Check whether this ship should take off with you.
-		if(isHere && !ship->IsDisabled()
-				&& (player.GetPlanet()->CanLand(*ship) || ship->IsYours())
-				&& !(ship->GetPersonality().IsStaying() || ship->GetPersonality().IsWaiting()))
+		// Check whether this ship should take off with you. "Launching" ships can always take
+		// off, otherwise they must be able to land and also not be flagged to stay in space.
+		if(isHere && !ship->IsDisabled() && (ship->GetPersonality().IsLaunching()
+				|| ((player.GetPlanet()->CanLand(*ship) || ship->IsYours())
+				&& !(ship->GetPersonality().IsStaying() || ship->GetPersonality().IsWaiting()))))
 		{
 			if(player.GetPlanet())
 				ship->SetPlanet(player.GetPlanet());
@@ -342,8 +284,83 @@ void Engine::Place()
 		
 		ship->Place(pos, ship->IsDisabled() ? Point() : velocity, angle);
 	}
+	// Move any ships that were randomly spawned into the main list, now
+	// that all special ships have been repositioned.
+	ships.splice(ships.end(), newShips);
 	
 	player.SetPlanet(nullptr);
+}
+
+
+
+// Add NPC ships to the known ships. These may have been freshly instantiated
+// from an accepted assisting/boarding mission, or from existing missions when
+// the player departs a planet.
+void Engine::Place(const list<NPC> &npcs, shared_ptr<Ship> flagship)
+{
+	for(const NPC &npc : npcs)
+	{
+		map<Ship *, int> droneCarriers;
+		map<Ship *, int> fighterCarriers;
+		for(const shared_ptr<Ship> &ship : npc.Ships())
+		{
+			// Skip ships that have been destroyed.
+			if(ship->IsDestroyed() || ship->IsDisabled())
+				continue;
+			
+			if(ship->BaysFree(false))
+				droneCarriers[&*ship] = ship->BaysFree(false);
+			if(ship->BaysFree(true))
+				fighterCarriers[&*ship] = ship->BaysFree(true);
+			// Redo the loading up of fighters.
+			ship->UnloadBays();
+		}
+		
+		shared_ptr<Ship> npcFlagship;
+		for(const shared_ptr<Ship> &ship : npc.Ships())
+		{
+			// Skip ships that have been destroyed.
+			if(ship->IsDestroyed())
+				continue;
+			
+			// Avoid the exploit where the player can wear down an NPC's
+			// crew by attrition over the course of many days.
+			ship->AddCrew(max(0, ship->RequiredCrew() - ship->Crew()));
+			if(!ship->IsDisabled())
+				ship->Recharge();
+			
+			if(ship->CanBeCarried())
+			{
+				bool docked = false;
+				map<Ship *, int> &carriers = (ship->Attributes().Category() == "Drone") ?
+					droneCarriers : fighterCarriers;
+				for(auto &it : carriers)
+					if(it.second && it.first->Carry(ship))
+					{
+						--it.second;
+						docked = true;
+						break;
+					}
+				if(docked)
+					continue;
+			}
+			
+			ships.push_back(ship);
+			// The first (alive) ship in an NPC block
+			// serves as the flagship of the group.
+			if(!npcFlagship)
+				npcFlagship = ship;
+			
+			// Only the flagship of an NPC considers the
+			// player: the rest of the NPC track it.
+			if(npcFlagship && ship != npcFlagship)
+				ship->SetParent(npcFlagship);
+			else if(!ship->GetPersonality().IsUninterested())
+				ship->SetParent(flagship);
+			else
+				ship->SetParent(nullptr);
+		}
+	}
 }
 
 
@@ -546,12 +563,20 @@ void Engine::Step(bool isActive)
 		info.SetBar("fuel", flagship->Fuel(),
 			flagship->Attributes().Get("fuel capacity") * .01);
 		info.SetBar("energy", flagship->Energy());
-		info.SetBar("heat", flagship->Heat());
+		double heat = flagship->Heat();
+		info.SetBar("heat", min(1., heat));
+		// If heat is above 100%, draw a second overlaid bar to indicate the
+		// total heat level.
+		if(heat > 1.)
+			info.SetBar("overheat", min(1., heat - 1.));
+		if(flagship->IsOverheated() && (step / 20) % 2)
+			info.SetBar("overheat blink", min(1., heat));
 		info.SetBar("shields", flagship->Shields());
 		info.SetBar("hull", flagship->Hull(), 20.);
+		info.SetBar("disabled hull", min(flagship->Hull(), flagship->DisabledHull()), 20.);
 	}
 	info.SetString("credits",
-		Format::Number(player.Accounts().Credits()) + " credits");
+		Format::Credits(player.Accounts().Credits()) + " credits");
 	bool isJumping = flagship && (flagship->Commands().Has(Command::JUMP) || flagship->IsEnteringHyperspace());
 	if(flagship && flagship->GetTargetStellar() && !isJumping)
 	{
@@ -594,7 +619,7 @@ void Engine::Step(bool isActive)
 		targetAsteroid = flagship->GetTargetAsteroid();
 		// Record that the player knows this type of asteroid is available here.
 		if(targetAsteroid)
-			for(const pair<const Outfit *, int> &it : targetAsteroid->Payload())
+			for(const auto &it : targetAsteroid->Payload())
 				player.Harvest(it.first);
 	}
 	if(!target)
@@ -639,6 +664,7 @@ void Engine::Step(bool isActive)
 		{
 			info.SetBar("target shields", target->Shields());
 			info.SetBar("target hull", target->Hull(), 20.);
+			info.SetBar("target disabled hull", min(target->Hull(), target->DisabledHull()), 20.);
 		
 			// The target area will be a square, with sides proportional to the average
 			// of the width and the height of the sprite.
@@ -1074,7 +1100,7 @@ void Engine::EnterSystem()
 	for(int i = 0; i < 5; ++i)
 		for(const System::FleetProbability &fleet : system->Fleets())
 			if(fleet.Get()->GetGovernment() && Random::Int(fleet.Period()) < 60)
-				fleet.Get()->Place(*system, ships);
+				fleet.Get()->Place(*system, newShips);
 	
 	const Fleet *raidFleet = system->GetGovernment()->RaidFleet();
 	const Government *raidGovernment = raidFleet ? raidFleet->GetGovernment() : nullptr;
@@ -1086,7 +1112,7 @@ void Engine::EnterSystem()
 			for(int i = 0; i < 10; ++i)
 				if(Random::Real() < attraction)
 				{
-					raidFleet->Place(*system, ships);
+					raidFleet->Place(*system, newShips);
 					Messages::Add("Your fleet has attracted the interest of a "
 							+ raidGovernment->GetName() + " raiding party.");
 				}
@@ -1379,7 +1405,7 @@ void Engine::MoveShip(const shared_ptr<Ship> &ship)
 		return;
 	
 	// Launch fighters.
-	ship->Launch(newShips);
+	ship->Launch(newShips, newVisuals);
 	
 	// Fire weapons. If this returns true the ship has at least one anti-missile
 	// system ready to fire.
@@ -1407,10 +1433,19 @@ void Engine::FillCollisionSets()
 
 
 
-// At random intervals, crete new fleets in neighboring systems or coming from
-// planets in the current one.
+// Spawn NPC (both mission and "regular") ships into the player's universe. Non-
+// mission NPCs are only spawned in or adjacent to the player's system.
 void Engine::SpawnFleets()
 {
+	// If the player has a pending boarding mission, spawn its NPCs.
+	if(player.ActiveBoardingMission())
+	{
+		Place(player.ActiveBoardingMission()->NPCs(), player.FlagshipPtr());
+		player.ClearActiveBoardingMission();
+	}
+	
+	// Non-mission NPCs spawn at random intervals in neighboring systems,
+	// or coming from planets in the current one.
 	for(const System::FleetProbability &fleet : player.GetSystem()->Fleets())
 		if(!Random::Int(fleet.Period()))
 		{
@@ -1503,7 +1538,7 @@ void Engine::SendHails()
 		return;
 	
 	// Generate a random hail message.
-	SendMessage(source, source->GetHail());
+	SendMessage(source, source->GetHail(player));
 }
 
 
@@ -1766,7 +1801,7 @@ void Engine::DoCollection(Flotsam &flotsam)
 			player.Harvest(outfit);
 		}
 		else
-			message = name + Format::Number(amount) + " "
+			message = name + to_string(amount) + " "
 				+ (amount == 1 ? outfit->Name() : outfit->PluralName()) + ".";
 	}
 	else
@@ -1785,7 +1820,7 @@ void Engine::DoCollection(Flotsam &flotsam)
 	if(!message.empty())
 	{
 		int free = collector->Cargo().Free();
-		message += " (" + Format::Number(free) + (free == 1 ? " ton" : " tons");
+		message += " (" + to_string(free) + (free == 1 ? " ton" : " tons");
 		message += " of free space remaining.)";
 		Messages::Add(message);
 	}
@@ -1832,6 +1867,15 @@ void Engine::FillRadar()
 			radar[calcTickTock].AddPointer(
 				(system == targetSystem) ? Radar::SPECIAL : Radar::INACTIVE,
 				system->Position() - playerSystem->Position());
+	}
+	
+	// Add viewport brackets.
+	if(!Preferences::Has("Disable viewport on radar"))
+	{
+		radar[calcTickTock].AddViewportBoundary(Screen::TopLeft() / zoom);
+		radar[calcTickTock].AddViewportBoundary(Screen::TopRight() / zoom);
+		radar[calcTickTock].AddViewportBoundary(Screen::BottomLeft() / zoom);
+		radar[calcTickTock].AddViewportBoundary(Screen::BottomRight() / zoom);
 	}
 	
 	// Add ships. Also check if hostile ships have newly appeared.

@@ -46,11 +46,11 @@ void DataFile::Load(const string &path)
 	if(data.empty() || data.back() != '\n')
 		data.push_back('\n');
 	
-	LoadData(data);
-	
 	// Note what file this node is in, so it will show up in error traces.
 	root.tokens.push_back("file");
 	root.tokens.push_back(path);
+	
+	LoadData(data);
 }
 
 
@@ -101,6 +101,8 @@ void DataFile::LoadData(const string &data)
 	// new node added at the next deeper indentation level.
 	vector<DataNode *> stack(1, &root);
 	vector<int> whiteStack(1, -1);
+	bool fileIsSpaces = false;
+	bool warned = false;
 	
 	size_t end = data.length();
 	for(size_t pos = 0; pos < end; pos = Font::NextCodePoint(data, pos))
@@ -108,9 +110,27 @@ void DataFile::LoadData(const string &data)
 		char32_t c = Font::DecodeCodePoint(data, pos);
 		
 		// Find the first non-white character in this line.
+		bool isSpaces = false;
 		int white = 0;
 		while(c <= ' ' && c != '\n')
 		{
+			// Warn about mixed indentations when parsing files.
+			if(!isSpaces && c == ' ')
+			{
+				// If we've parsed whitespace that wasn't a space, issue a warning.
+				if(white)
+					stack.back()->PrintTrace("Mixed whitespace usage in line");
+				else
+					fileIsSpaces = true;
+				
+				isSpaces = true;
+			}
+			else if(fileIsSpaces && !warned && c != ' ')
+			{
+				warned = true;
+				stack.back()->PrintTrace("Mixed whitespace usage in file");
+			}
+			
 			++white;
 			pos = Font::NextCodePoint(data, pos);
 			c = Font::DecodeCodePoint(data, pos);

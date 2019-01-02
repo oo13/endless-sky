@@ -134,6 +134,7 @@ private:
 	int size;
 	mutable Cache<std::string, double, true> widthCache;
 	mutable Cache<std::string, std::vector<DrawnData>, true> drawCache;
+	int heightOverride;
 };
 
 
