@@ -35,6 +35,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "SpriteShader.h"
 #include "UI.h"
 
+#include <cctype>
 #include <iterator>
 
 using namespace std;
@@ -45,6 +46,17 @@ namespace {
 	const int WIDTH = 540;
 	// Margin on either side of the text.
 	const int MARGIN = 20;
+	
+	// Remove characters that can't be used in a file name.
+	static const string FORBIDDEN = "/\\?*:|\"<>~";
+	string RemoveDisallowableCharacters(const string &s)
+	{
+		string name;
+		for(const char c : s)
+			if(FORBIDDEN.find(c) == string::npos && !iscntrl(static_cast<unsigned char>(c)))
+				name += c;
+		return name;
+	}
 }
 
 
@@ -213,18 +225,33 @@ bool ConversationPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &comm
 		// as does the return key if the other field is still empty.
 		if(key >= ' ' && key <= '~')
 		{
-			// Apply the shift or caps lock key.
-			char c = ((mod & KMOD_SHIFT) ? SHIFT[key] : key);
-			// Caps lock should shift letters, but not any other keys.
-			if((mod & KMOD_CAPS) && c >= 'a' && c <= 'z')
-				c += 'A' - 'a';
-			// Don't allow characters that can't be used in a file name.
-			static const string FORBIDDEN = "/\\?*:|\"<>~";
-			if(FORBIDDEN.find(c) == string::npos)
-				name += c;
+			string s;
+			// Get a UTF-8 text from clipboard.
+			if(key == 'v' && (mod & KMOD_CTRL))
+			{
+				char *clipboard = SDL_GetClipboardText();
+				if(clipboard)
+				{
+					s += clipboard;
+					SDL_free(clipboard);
+				}
+			}
+			else
+			{
+				// Apply the shift or caps lock key.
+				char c = ((mod & KMOD_SHIFT) ? SHIFT[key] : key);
+				// Caps lock should shift letters, but not any other keys.
+				if((mod & KMOD_CAPS) && c >= 'a' && c <= 'z')
+					c += 'A' - 'a';
+				s += c;
+			}
+			name += RemoveDisallowableCharacters(s);
 		}
 		else if((key == SDLK_DELETE || key == SDLK_BACKSPACE) && !name.empty())
-			name.erase(name.size() - 1);
+		{
+			const size_t n = Font::CodePointStart(name, name.size() - 1);
+			name.erase(name.begin() + n, name.end());
+		}
 		else if(key == '\t' || ((key == SDLK_RETURN || key == SDLK_KP_ENTER) && otherName.empty()))
 			choice = !choice;
 		else if((key == SDLK_RETURN || key == SDLK_KP_ENTER) && !firstName.empty() && !lastName.empty())
@@ -260,6 +287,24 @@ bool ConversationPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &comm
 	else
 		return false;
 	
+	return true;
+}
+
+
+
+// Paste a text into player's name.
+bool ConversationPanel::MClick(int x, int y)
+{
+	if(choices.empty())
+	{
+		string &name = (choice ? lastName : firstName);
+		char *clipboard = SDL_GetClipboardText();
+		if(clipboard)
+		{
+			name += RemoveDisallowableCharacters(clipboard);
+			SDL_free(clipboard);
+		}
+	}
 	return true;
 }
 

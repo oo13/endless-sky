@@ -63,13 +63,14 @@ protected:
 	// button is highlighted and the enter key to select it.
 	virtual bool KeyDown(SDL_Keycode key, Uint16 mod, const Command &command) override;
 	virtual bool Click(int x, int y, int clicks) override;
+	virtual bool MClick(int x, int y) override;
 	
 	
 private:
 	// Common code from all three constructors:
 	void Init(const std::string &message, bool canCancel = true, bool isMission = false);
 	void DoCallback() const;
-	
+	void InputText(const std::string &s);
 	
 protected:
 	WrappedText text;

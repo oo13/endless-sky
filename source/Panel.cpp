@@ -132,6 +132,13 @@ bool Panel::Click(int x, int y, int clicks)
 
 
 
+bool Panel::MClick(int x, int y)
+{
+	return false;
+}
+
+
+
 bool Panel::RClick(int x, int y)
 {
 	return false;

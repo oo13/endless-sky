@@ -185,22 +185,33 @@ bool Dialog::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command)
 	bool isCloseRequest = key == SDLK_ESCAPE || (key == 'w' && (mod & (KMOD_CTRL | KMOD_GUI)));
 	if((it != KEY_MAP.end() || (key >= ' ' && key <= '~')) && !isMission && (intFun || stringFun) && !isCloseRequest)
 	{
-		int ascii = (it != KEY_MAP.end()) ? it->second : key;
-		char c = ((mod & KMOD_SHIFT) ? SHIFT[ascii] : ascii);
-		// Caps lock should shift letters, but not any other keys.
-		if((mod & KMOD_CAPS) && c >= 'a' && c <= 'z')
-			c += 'A' - 'a';
-		
-		if(stringFun)
-			input += c;
-		// Integer input should not allow leading zeros.
-		else if(intFun && c == '0' && !input.empty())
-			input += c;
-		else if(intFun && c >= '1' && c <= '9')
-			input += c;
+		string s;
+		// Get a UTF-8 text from clipboard.
+		if(key == 'v' && (mod & KMOD_CTRL))
+		{
+			char *clipboard = SDL_GetClipboardText();
+			if(clipboard)
+			{
+				s += clipboard;
+				SDL_free(clipboard);
+			}
+		}
+		else
+		{
+			int ascii = (it != KEY_MAP.end()) ? it->second : key;
+			char c = ((mod & KMOD_SHIFT) ? SHIFT[ascii] : ascii);
+			// Caps lock should shift letters, but not any other keys.
+			if((mod & KMOD_CAPS) && c >= 'a' && c <= 'z')
+				c += 'A' - 'a';
+			s += c;
+		}
+		InputText(s);
 	}
 	else if((key == SDLK_DELETE || key == SDLK_BACKSPACE) && !input.empty())
-		input.erase(input.length() - 1);
+	{
+		const size_t n = Font::CodePointStart(input, input.size() - 1);
+		input.erase(input.begin() + n, input.end());
+	}
 	else if(key == SDLK_TAB && canCancel)
 		okIsActive = !okIsActive;
 	else if(key == SDLK_LEFT)
@@ -251,6 +262,23 @@ bool Dialog::Click(int x, int y, int clicks)
 		}
 	}
 	
+	return true;
+}
+
+
+
+// Paste a text into player's name.
+bool Dialog::MClick(int x, int y)
+{
+	if(!isMission && (intFun || stringFun))
+	{
+		char *clipboard = SDL_GetClipboardText();
+		if(clipboard)
+		{
+			InputText(clipboard);
+			SDL_free(clipboard);
+		}
+	}
 	return true;
 }
 
@@ -310,4 +338,21 @@ void Dialog::DoCallback() const
 	
 	if(voidFun)
 		voidFun();
+}
+
+
+
+void Dialog::InputText(const string &s)
+{
+	if(stringFun)
+		input += s;
+	else if(intFun)
+	{
+		for(const char c : s)
+			// Integer input should not allow leading zeros.
+			if(c == '0' && !input.empty())
+				input += c;
+			else if(c >= '1' && c <= '9')
+				input += c;
+	}
 }
