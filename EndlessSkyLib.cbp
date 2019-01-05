@@ -304,6 +304,8 @@
 		<Unit filename="source/Test.h" />
 		<Unit filename="source/TestData.cpp" />
 		<Unit filename="source/TestData.h" />
+		<Unit filename="source/TextInputPanel.cpp" />
+		<Unit filename="source/TextInputPanel.h" />
 		<Unit filename="source/Trade.cpp" />
 		<Unit filename="source/Trade.h" />
 		<Unit filename="source/TradingPanel.cpp" />

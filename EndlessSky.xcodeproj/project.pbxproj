@@ -126,6 +126,7 @@
 		A96863FF1AE6FD0E004FE1FE /* StellarObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A96863901AE6FD0D004FE1FE /* StellarObject.cpp */; };
 		A96864001AE6FD0E004FE1FE /* System.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A96863921AE6FD0D004FE1FE /* System.cpp */; };
 		A96864011AE6FD0E004FE1FE /* Table.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A96863941AE6FD0D004FE1FE /* Table.cpp */; };
+		B590162321ED4A0F00799178 /* TextInputPanel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B590162121ED4A0F00799178 /* TextInputPanel.cpp */; };
 		A96864021AE6FD0E004FE1FE /* Trade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A96863961AE6FD0D004FE1FE /* Trade.cpp */; };
 		A96864031AE6FD0E004FE1FE /* TradingPanel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A96863981AE6FD0D004FE1FE /* TradingPanel.cpp */; };
 		A96864041AE6FD0E004FE1FE /* UI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A968639A1AE6FD0D004FE1FE /* UI.cpp */; };
@@ -513,6 +514,8 @@
 		DFAAE2A91FD4A27B0072C0A8 /* ImageSet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ImageSet.h; path = source/ImageSet.h; sourceTree = "<group>"; };
 		F434470BA8F3DE8B46D475C5 /* StartConditionsPanel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StartConditionsPanel.h; path = source/StartConditionsPanel.h; sourceTree = "<group>"; };
 		F8C14CFB89472482F77C051D /* Weather.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Weather.h; path = source/Weather.h; sourceTree = "<group>"; };
+		B590162121ED4A0F00799178 /* TextInputPanel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TextInputPanel.cpp; path = source/TextInputPanel.cpp; sourceTree = "<group>"; };
+		B590162221ED4A0F00799178 /* TextInputPanel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TextInputPanel.h; path = source/TextInputPanel.h; sourceTree = "<group>"; };
 		B590161A21ED4A0F00799178 /* spiritless_po/Catalog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Catalog.h; path = source/spiritless_po/Catalog.h; sourceTree = "<group>"; };
 		B590161B21ED4A0F00799178 /* spiritless_po/Common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Common.h; path = source/spiritless_po/Common.h; sourceTree = "<group>"; };
 		B590161C21ED4A0F00799178 /* spiritless_po/MetadataParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MetadataParser.h; path = source/spiritless_po/MetadataParser.h; sourceTree = "<group>"; };
@@ -816,6 +819,8 @@
 				02D34A71AE3BC4C93FC6865B /* TestData.cpp */,
 				9DA14712A9C68E00FBFD9C72 /* TestData.h */,
 				5CE3475B85CE8C48D98664B7 /* Test.h */,
+				B590162121ED4A0F00799178 /* TextInputPanel.cpp */,
+				B590162221ED4A0F00799178 /* TextInputPanel.h */,
 				2E1E458DB603BF979429117C /* DisplayText.cpp */,
 				13B643F6BEC24349F9BC9F42 /* alignment.hpp */,
 				9BCF4321AF819E944EC02FB9 /* layout.hpp */,
@@ -1132,6 +1137,7 @@
 				94DF4B5B8619F6A3715D6168 /* Weather.cpp in Sources */,
 				6EC347E6A79BA5602BA4D1EA /* StartConditionsPanel.cpp in Sources */,
 				03624EC39EE09C7A786B4A3D /* CoreStartData.cpp in Sources */,
+				B590162321ED4A0F00799178 /* TextInputPanel.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
