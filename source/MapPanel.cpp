@@ -586,7 +586,9 @@ void MapPanel::Find(const string &name)
 	for(const auto &it : GameData::Systems())
 		if(player.HasVisited(&it.second))
 		{
-			int index = Search(it.first, name);
+			int index = Search(it.second.Name(), name);
+			if(index < 0)
+				index = Search(it.first, name);
 			if(index >= 0 && index < bestIndex)
 			{
 				bestIndex = index;
@@ -602,7 +604,9 @@ void MapPanel::Find(const string &name)
 	for(const auto &it : GameData::Planets())
 		if(player.HasVisited(it.second.GetSystem()))
 		{
-			int index = Search(it.first, name);
+			int index = Search(it.second.Name(), name);
+			if(index < 0)
+				index = Search(it.first, name);
 			if(index >= 0 && index < bestIndex)
 			{
 				bestIndex = index;
