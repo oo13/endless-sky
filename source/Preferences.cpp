@@ -184,13 +184,6 @@ void Preferences::ToggleLanguage()
 
 
 
-string Preferences::LanguageCode()
-{
-	return Languages::LanguageCode();
-}
-
-
-
 string Preferences::LanguagePreferenceName()
 {
 	return Languages::PreferenceName();

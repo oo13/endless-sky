@@ -41,7 +41,6 @@ public:
 	
 	// Languages.
 	static void ToggleLanguage();
-	static std::string LanguageCode();
 	static std::string LanguagePreferenceName();
 };
 

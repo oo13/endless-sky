@@ -41,7 +41,7 @@ public:
 	// Set a initial language from preferences.
 	static void SetInitialPreferenceLanguage(const std::string &languageCode);
 	
-	// Toggle the language. Return a pair of display name and language code for preferences.
+	// Toggle the language.
 	static void ToggleLanguage();
 };
 

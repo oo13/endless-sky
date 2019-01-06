@@ -188,7 +188,7 @@ bool PreferencesPanel::Click(int x, int y, int clicks)
 					speed = 20;
 				Preferences::SetScrollSpeed(speed);
 			}
-			if(zone.Value() == LANGUAGE)
+			else if(zone.Value() == LANGUAGE)
 				Preferences::ToggleLanguage();
 			else
 				Preferences::Set(zone.Value(), !Preferences::Has(zone.Value()));
