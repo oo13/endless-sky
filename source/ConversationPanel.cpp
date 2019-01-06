@@ -163,6 +163,17 @@ void ConversationPanel::Draw()
 		font.Draw(T("Last name:"), point + Point(270, 0), dim);
 		font.Draw(lastName, point + Point(350, 0), choice ? bright : grey);
 		
+		// Draw the editing text.
+		if(!editText.empty())
+		{
+			Point offset;
+			if(choice)
+				offset = Point(350 + 4 + font.Width(lastName), 0);
+			else
+				offset = Point(120 + 4 + font.Width(firstName), 0);
+			font.Draw(editText, point + offset, bright);
+		}
+		
 		// Draw the OK button, and remember its location.
 		static const T_ ok = T_("[ok]");
 		int width = font.Width(ok);
@@ -292,20 +303,53 @@ bool ConversationPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &comm
 
 
 
-// Paste a text into player's name.
+bool ConversationPanel::TextEditing(const char *text, Sint32 start, Sint32 length)
+{
+	if(startTextInput)
+	{
+		if(start == 0)
+			editText = text;
+		else
+			editText += text;
+		return true;
+	}
+	return false;
+}
+
+
+
+bool ConversationPanel::TextInput(const char *text)
+{
+	if(startTextInput)
+	{
+		if(editText.empty())
+			// KeyDown() handle direct input text.
+			return true;
+		// Right now we're asking the player to enter their name.
+		(choice ? lastName : firstName) += RemoveDisallowableCharacters(text);
+		editText.clear();
+		return true;
+	}
+	return false;
+}
+
+
+
 bool ConversationPanel::MClick(int x, int y)
 {
 	if(choices.empty())
 	{
-		string &name = (choice ? lastName : firstName);
+		// Paste a text into player's name.
 		char *clipboard = SDL_GetClipboardText();
 		if(clipboard)
 		{
+			string &name = (choice ? lastName : firstName);
 			name += RemoveDisallowableCharacters(clipboard);
 			SDL_free(clipboard);
+			return true;
 		}
 	}
-	return true;
+	return false;
 }
 
 
@@ -331,6 +375,13 @@ bool ConversationPanel::Scroll(double dx, double dy)
 // The player just selected the given choice.
 void ConversationPanel::Goto(int index, int choice)
 {
+	if(startTextInput)
+	{
+		startTextInput = false;
+		editText.clear();
+		SDL_StopTextInput();
+	}
+	
 	if(index)
 	{
 		// Add the chosen option to the text.
@@ -385,6 +436,13 @@ void ConversationPanel::Goto(int index, int choice)
 		choices.emplace_back(altered);
 	}
 	this->choice = 0;
+	
+	// Start to input a name.
+	if(node >= 0 && choices.empty())
+	{
+		startTextInput = true;
+		SDL_StartTextInput();
+	}
 }
 
 

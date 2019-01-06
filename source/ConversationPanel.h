@@ -51,6 +51,8 @@ template <class T>
 protected:
 	// Event handlers.
 	virtual bool KeyDown(SDL_Keycode key, Uint16 mod, const Command &command) override;
+	virtual bool TextEditing(const char *text, Sint32 start, Sint32 length) override;
+	virtual bool TextInput(const char *text) override;
 	virtual bool MClick(int x, int y) override;
 	virtual bool Drag(double dx, double dy) override;
 	virtual bool Scroll(double dx, double dy) override;
@@ -130,6 +132,10 @@ private:
 	// acts upon (e.g. the ship failing a "flight check", or the NPC you
 	// have boarded).
 	std::shared_ptr<Ship> ship;
+	
+	// To handle text input event.
+	bool startTextInput = false;
+	std::string editText;
 };
 
 

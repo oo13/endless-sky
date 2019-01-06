@@ -169,11 +169,19 @@ void Dialog::Draw()
 		Point stringPos(
 			inputPos.X() - (WIDTH - 20) * .5 + 5.,
 			inputPos.Y() - .5 * font.Height());
-		string truncated = font.TruncateFront(input, WIDTH - 30);
+		const int editWidth = editText.empty() ? 0 : font.Width(editText) + 4;
+		string truncated = font.TruncateFront(input, WIDTH - 30 - editWidth);
 		font.Draw(truncated, stringPos, bright);
 		
-		Point barPos(stringPos.X() + font.Width(truncated) + 2., inputPos.Y());
+		const int width = font.Width(truncated);
+		Point barPos(stringPos.X() + width + 2., inputPos.Y());
 		FillShader::Fill(barPos, Point(1., 16.), dim);
+		
+		if(!editText.empty())
+		{
+			Point editPos(barPos.X() + 2, stringPos.Y());
+			font.Draw(editText, editPos, bright);
+		}
 	}
 }
 
@@ -205,7 +213,7 @@ bool Dialog::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command)
 				c += 'A' - 'a';
 			s += c;
 		}
-		InputText(s);
+		AddText(s);
 	}
 	else if((key == SDLK_DELETE || key == SDLK_BACKSPACE) && !input.empty())
 	{
@@ -229,6 +237,12 @@ bool Dialog::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command)
 		if(okIsActive || isMission)
 			DoCallback();
 		
+		if(startTextInput)
+		{
+			startTextInput = false;
+			editText.clear();
+			SDL_StopTextInput();
+		}
 		GetUI()->Pop(this);
 	}
 	else if((key == 'm' || command.Has(Command::MAP)) && system && player)
@@ -267,6 +281,37 @@ bool Dialog::Click(int x, int y, int clicks)
 
 
 
+bool Dialog::TextEditing(const char *text, Sint32 start, Sint32 length)
+{
+	if(startTextInput)
+	{
+		if(start == 0)
+			editText = text;
+		else
+			editText += text;
+		return true;
+	}
+	return false;
+}
+
+
+
+bool Dialog::TextInput(const char *text)
+{
+	if(startTextInput)
+	{
+		if(editText.empty())
+			// KeyDown() handle direct input text.
+			return true;
+		AddText(text);
+		editText.clear();
+		return true;
+	}
+	return false;
+}
+
+
+
 // Paste a text into player's name.
 bool Dialog::MClick(int x, int y)
 {
@@ -275,7 +320,7 @@ bool Dialog::MClick(int x, int y)
 		char *clipboard = SDL_GetClipboardText();
 		if(clipboard)
 		{
-			InputText(clipboard);
+			AddText(clipboard);
 			SDL_free(clipboard);
 		}
 	}
@@ -307,6 +352,13 @@ void Dialog::Init(const string &message, bool canCancel, bool isMission)
 		height = 0;
 	else
 		height = (height - 40) / 40;
+	
+	// Start to input a text.
+	if(intFun || stringFun)
+	{
+		startTextInput = true;
+		SDL_StartTextInput();
+	}
 }
 
 
@@ -342,7 +394,7 @@ void Dialog::DoCallback() const
 
 
 
-void Dialog::InputText(const string &s)
+void Dialog::AddText(const string &s)
 {
 	if(stringFun)
 		input += s;

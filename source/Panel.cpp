@@ -125,6 +125,20 @@ bool Panel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command)
 
 
 
+bool Panel::TextEditing(const char *text, Sint32 start, Sint32 length)
+{
+	return false;
+}
+
+
+
+bool Panel::TextInput(const char *text)
+{
+	return false;
+}
+
+
+
 bool Panel::Click(int x, int y, int clicks)
 {
 	return false;

@@ -62,6 +62,8 @@ protected:
 	// The use can click "ok" or "cancel", or use the tab key to toggle which
 	// button is highlighted and the enter key to select it.
 	virtual bool KeyDown(SDL_Keycode key, Uint16 mod, const Command &command) override;
+	virtual bool TextEditing(const char *text, Sint32 start, Sint32 length) override;
+	virtual bool TextInput(const char *text) override;
 	virtual bool Click(int x, int y, int clicks) override;
 	virtual bool MClick(int x, int y) override;
 	
@@ -70,7 +72,7 @@ private:
 	// Common code from all three constructors:
 	void Init(const std::string &message, bool canCancel = true, bool isMission = false);
 	void DoCallback() const;
-	void InputText(const std::string &s);
+	void AddText(const std::string &s);
 	
 protected:
 	WrappedText text;
@@ -91,6 +93,10 @@ protected:
 	
 	const System *system = nullptr;
 	PlayerInfo *player = nullptr;
+	
+	// To handle text input event.
+	bool startTextInput = false;
+	std::string editText;
 };
 
 
