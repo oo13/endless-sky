@@ -13,6 +13,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Languages.h"
 
 #include "DataNode.h"
+#include "Format.h"
 #include "Gettext.h"
 #include "Files.h"
 #include "FontSet.h"
@@ -46,11 +47,16 @@ namespace {
 		const vector<string> &CatalogFiles() const;
 		void AddCatalogFile(const string &catalogFile);
 		
+		// Get the fullname formats.
+		const vector<string> &GetFullnameFormats() const;
+		
+		
 	private:
 		string name;
 		mutable map<int, vector<string>> fontPriority;
 		mutable map<int, string> fontReference;
 		vector<string> catalogFiles;
+		vector<string> fullnameFormats;
 	};
 	
 	
@@ -65,6 +71,11 @@ namespace {
 	
 	vector<string> toggleList{ systemDefaultLanguageCode, englishCode };
 	size_t currentIndex = 0;
+	
+	// Fullname format.
+	const string defaultFullnameFormat("<first> <last>");
+	string currentFullnameFormat(defaultFullnameFormat);
+	size_t currentFullnameIndex = 0;
 	
 	
 	
@@ -116,6 +127,9 @@ namespace {
 				for(const DataNode &grand : child)
 					fontReference[size] = grand.Token(0);
 			}
+			else if(child.Token(0) == "fullname")
+				for(const DataNode &grand : child)
+					fullnameFormats.push_back(grand.Token(0));
 			else
 				child.PrintTrace("Skipping unrecognized attribute:");
 		}
@@ -190,6 +204,13 @@ namespace {
 	
 	
 	
+	const vector<string> &Language::GetFullnameFormats() const
+	{
+		return fullnameFormats;
+	}
+	
+	
+	
 	// Get the system default language code (ISO-639-1).
 	string GetSystemDefaultLanguage()
 	{
@@ -225,6 +246,22 @@ namespace {
 			lang.SetName(code);
 		}
 		return lang;
+	}
+	
+	
+	
+	void SetFullnameFormatFromIndex(size_t n)
+	{
+		const vector<string> formats = selected->second.GetFullnameFormats();
+		if(formats.empty())
+			currentFullnameFormat = defaultFullnameFormat;
+		else
+		{
+			currentFullnameIndex = n;
+			if(n >= formats.size())
+				currentFullnameIndex = 0;
+			currentFullnameFormat = formats[currentFullnameIndex];
+		}
 	}
 }
 
@@ -325,4 +362,43 @@ void Languages::ToggleLanguage()
 	if(currentIndex >= toggleList.size())
 		currentIndex = 0;
 	SelectLanguage(toggleList[currentIndex]);
+	SetFullnameFormatFromIndex(0);
+}
+
+
+
+string Languages::Fullname(const string &first, const string &last)
+{
+	map<string, string> subs;
+	subs["<first>"] = first;
+	subs["<last>"] = last;
+	return Format::Replace(currentFullnameFormat, subs);
+}
+
+
+
+string Languages::FullnameFormat()
+{
+	return currentFullnameFormat;
+}
+
+
+
+void Languages::SetFullnameFormat(const std::string &fullnameFormat)
+{
+	const vector<string> formats = selected->second.GetFullnameFormats();
+	auto it = find(formats.begin(), formats.end(), fullnameFormat);
+	if(it == formats.end())
+		currentFullnameIndex = 0;
+	else
+		currentFullnameIndex = distance(formats.begin(), it);
+	SetFullnameFormatFromIndex(currentFullnameIndex);
+}
+
+
+
+void Languages::ToggleFullnameFormat()
+{
+	++currentFullnameIndex;
+	SetFullnameFormatFromIndex(currentFullnameIndex);
 }

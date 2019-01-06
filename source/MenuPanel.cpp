@@ -22,6 +22,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Gettext.h"
 #include "Interface.h"
 #include "Information.h"
+#include "Languages.h"
 #include "LoadPanel.h"
 #include "MainPanel.h"
 #include "Planet.h"
@@ -95,7 +96,8 @@ void MenuPanel::Draw()
 	if(player.IsLoaded() && !player.IsDead())
 	{
 		info.SetCondition("pilot loaded");
-		info.SetString("pilot", font.TruncateMiddle(player.FirstName() + " " + player.LastName(), 165));
+		const string fullname = Languages::Fullname(player.FirstName(), player.LastName());
+		info.SetString("pilot", font.TruncateMiddle(fullname, 165));
 		if(player.Flagship())
 		{
 			const Ship &flagship = *player.Flagship();
@@ -112,7 +114,8 @@ void MenuPanel::Draw()
 	else if(player.IsLoaded())
 	{
 		info.SetCondition("no pilot loaded");
-		info.SetString("pilot", font.TruncateMiddle(player.FirstName() + " " + player.LastName(), 165));
+		const string fullname = Languages::Fullname(player.FirstName(), player.LastName());
+		info.SetString("pilot", font.TruncateMiddle(fullname, 165));
 		info.SetString("ship", T("You have died."));
 	}
 	else

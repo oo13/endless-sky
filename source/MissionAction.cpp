@@ -21,6 +21,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "GameData.h"
 #include "GameEvent.h"
 #include "Gettext.h"
+#include "Languages.h"
 #include "Messages.h"
 #include "Outfit.h"
 #include "PlayerInfo.h"
@@ -411,6 +412,7 @@ void MissionAction::Do(PlayerInfo &player, UI *ui, const System *destination, co
 		map<string, string> subs;
 		subs["<first>"] = player.FirstName();
 		subs["<last>"] = player.LastName();
+		subs["<fullname>"] = Languages::Fullname(player.FirstName(), player.LastName());
 		if(player.Flagship())
 			subs["<ship>"] = player.Flagship()->Name();
 		const string text = Format::Replace(Concat(dialogText), subs);

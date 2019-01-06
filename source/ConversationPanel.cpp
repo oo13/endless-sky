@@ -23,6 +23,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "GameData.h"
 #include "Gettext.h"
 #include "Government.h"
+#include "Languages.h"
 #include "MapDetailPanel.h"
 #include "PlayerInfo.h"
 #include "Point.h"
@@ -57,6 +58,7 @@ ConversationPanel::ConversationPanel(PlayerInfo &player, const Conversation &con
 	// text is prepared for display.
 	subs["<first>"] = player.FirstName();
 	subs["<last>"] = player.LastName();
+	subs["<fullname>"] = Languages::Fullname(player.FirstName(), player.LastName());
 	if(ship)
 		subs["<ship>"] = ship->Name();
 	else if(player.Flagship())
@@ -236,6 +238,7 @@ bool ConversationPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &comm
 			player.SetName(firstName, lastName);
 			subs["<first>"] = player.FirstName();
 			subs["<last>"] = player.LastName();
+			subs["<fullname>"] = Languages::Fullname(player.FirstName(), player.LastName());
 			
 			Goto(node + 1);
 		}

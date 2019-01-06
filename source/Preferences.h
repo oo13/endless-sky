@@ -42,6 +42,10 @@ public:
 	// Languages.
 	static void ToggleLanguage();
 	static std::string LanguagePreferenceName();
+	
+	// Fullname formats.
+	static void ToggleFullnameFormat();
+	static std::string FullnameFormat();
 };
 
 

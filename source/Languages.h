@@ -43,6 +43,17 @@ public:
 	
 	// Toggle the language.
 	static void ToggleLanguage();
+	
+	// Get a fullname.
+	static std::string Fullname(const std::string &first, const std::string &last);
+	// Get a fullname format for preferences.
+	static std::string FullnameFormat();
+	
+	// Set a fullname format from preferences.
+	static void SetFullnameFormat(const std::string &fullnameFormat);
+	
+	// Toggle the fullname format.
+	static void ToggleFullnameFormat();
 };
 
 #endif

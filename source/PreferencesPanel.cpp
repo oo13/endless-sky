@@ -55,6 +55,7 @@ namespace {
 	const string SCROLL_SPEED = G("Scroll speed");
 	const string FIGHTER_REPAIR = G("Repair fighters in");
 	const string LANGUAGE = G("Language");
+	const string FULLNAME = G("Fullname format");
 }
 
 
@@ -190,6 +191,8 @@ bool PreferencesPanel::Click(int x, int y, int clicks)
 			}
 			else if(zone.Value() == LANGUAGE)
 				Preferences::ToggleLanguage();
+			else if(zone.Value() == FULLNAME)
+				Preferences::ToggleFullnameFormat();
 			else
 				Preferences::Set(zone.Value(), !Preferences::Has(zone.Value()));
 			break;
@@ -454,7 +457,8 @@ void PreferencesPanel::DrawSettings()
 		SCROLL_SPEED,
 		G("Show escort systems on map"),
 		G("Warning siren"),
-		LANGUAGE
+		LANGUAGE,
+		FULLNAME
 	};
 	bool isCategory = true;
 	for(const string &setting : SETTINGS)
@@ -548,6 +552,11 @@ void PreferencesPanel::DrawSettings()
 		{
 			isOn = true;
 			text = Preferences::LanguagePreferenceName();
+		}
+		else if(setting == FULLNAME)
+		{
+			isOn = true;
+			text = Preferences::FullnameFormat();
 		}
 		else
 			text = isOn ? T("on") : T("off");

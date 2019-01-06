@@ -20,6 +20,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "GameData.h"
 #include "Gettext.h"
 #include "Government.h"
+#include "Languages.h"
 #include "Messages.h"
 #include "Planet.h"
 #include "PlayerInfo.h"
@@ -746,6 +747,7 @@ string Mission::BlockedMessage(const PlayerInfo &player)
 	map<string, string> subs;
 	subs["<first>"] = player.FirstName();
 	subs["<last>"] = player.LastName();
+	subs["<fullname>"] = Languages::Fullname(player.FirstName(), player.LastName());
 	if(flagship)
 		subs["<ship>"] = flagship->Name();
 	

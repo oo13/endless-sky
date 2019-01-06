@@ -76,6 +76,8 @@ void Preferences::Load()
 			zoomIndex = node.Value(1);
 		else if(node.Token(0) == "language" && node.Size() >= 2)
 			Languages::SetInitialPreferenceLanguage(node.Token(1));
+		else if(node.Token(0) == "fullname format" && node.Size() >= 2)
+			Languages::SetFullnameFormat(node.Token(1));
 		else
 			settings[node.Token(0)] = (node.Size() == 1 || node.Value(1));
 	}
@@ -93,6 +95,7 @@ void Preferences::Save()
 	out.Write("scroll speed", scrollSpeed);
 	out.Write("view zoom", zoomIndex);
 	out.Write("language", Languages::LanguageCode());
+	out.Write("fullname format", Languages::FullnameFormat());
 	
 	for(const auto &it : settings)
 		out.Write(it.first, it.second);
@@ -187,4 +190,18 @@ void Preferences::ToggleLanguage()
 string Preferences::LanguagePreferenceName()
 {
 	return Languages::PreferenceName();
+}
+
+
+
+void Preferences::ToggleFullnameFormat()
+{
+	Languages::ToggleFullnameFormat();
+}
+
+
+
+string Preferences::FullnameFormat()
+{
+	return Languages::FullnameFormat();
 }

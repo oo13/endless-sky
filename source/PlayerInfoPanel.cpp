@@ -20,6 +20,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Gettext.h"
 #include "Information.h"
 #include "Interface.h"
+#include "Languages.h"
 #include "LogbookPanel.h"
 #include "MissionPanel.h"
 #include "Planet.h"
@@ -482,7 +483,8 @@ void PlayerInfoPanel::DrawPlayer(const Rectangle &bounds)
 	
 	// Header row.
 	table.Draw(T("player:"), dim);
-	table.Draw(player.FirstName() + " " + player.LastName(), bright);
+	const string fullname = Languages::Fullname(player.FirstName(), player.LastName());
+	table.Draw(fullname, bright);
 	table.Draw(T("net worth:"), dim);
 	table.Draw(Format::Credits(player.Accounts().NetWorth()) + T(" credits", "PlayerInfoPanel"), bright);
 	
