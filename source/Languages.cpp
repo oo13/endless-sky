@@ -327,6 +327,8 @@ void Languages::SelectLanguage(const string &languageCode)
 	if(languageCode == systemDefaultLanguageCode)
 		code = GetSystemDefaultLanguage();
 	selected = languages.find(code);
+	if(selected == languages.end())
+		selected = languages.emplace(code, Language()).first;
 	
 	auto prioFunc = [&](int s) -> const vector<string>& { return selected->second.FontPriority(s); };
 	auto refFunc = [&](int s) -> const string& { return selected->second.FontReference(s); };
