@@ -213,6 +213,18 @@ void ConversationPanel::Draw()
 // Handle key presses.
 bool ConversationPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command)
 {
+	if(!editText.empty())
+	{
+#ifdef __unix__
+		if(key <= 0x7F)
+		{
+			// Check if editText is empty.
+			// ibus and fcitx don't raise a event EditingText when deleting a last character.
+			editText.clear();
+		}
+#endif
+		return true;
+	}
 	// Map popup happens when you press the map key, unless the name text entry
 	// fields are currently active.
 	if(command.Has(Command::MAP) && !choices.empty())
@@ -307,10 +319,14 @@ bool ConversationPanel::TextEditing(const char *text, Sint32 start, Sint32 lengt
 {
 	if(startTextInput)
 	{
-		if(start == 0)
-			editText = text;
-		else
+#ifdef __unix__
+		if(start != 0)
 			editText += text;
+		else
+			editText = text;
+#else
+		editText = text;
+#endif
 		return true;
 	}
 	return false;
@@ -322,9 +338,6 @@ bool ConversationPanel::TextInput(const char *text)
 {
 	if(startTextInput)
 	{
-		if(editText.empty())
-			// KeyDown() handle direct input text.
-			return true;
 		// Right now we're asking the player to enter their name.
 		(choice ? lastName : firstName) += RemoveDisallowableCharacters(text);
 		editText.clear();

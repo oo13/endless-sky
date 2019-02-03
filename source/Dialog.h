@@ -96,6 +96,7 @@ protected:
 	
 	// To handle text input event.
 	bool startTextInput = false;
+	bool existKeyDownChar = false;
 	std::string editText;
 };
 

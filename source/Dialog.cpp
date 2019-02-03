@@ -189,6 +189,17 @@ void Dialog::Draw()
 
 bool Dialog::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command)
 {
+	existKeyDownChar = false;
+	if(!editText.empty())
+	{
+#ifdef __unix__
+		if(key <= 0x7F)
+			// Check if editText is empty.
+			// ibus and fcitx don't raise a event EditingText when deleting a last character.
+			editText.clear();
+#endif
+		return true;
+	}
 	auto it = KEY_MAP.find(key);
 	bool isCloseRequest = key == SDLK_ESCAPE || (key == 'w' && (mod & (KMOD_CTRL | KMOD_GUI)));
 	if((it != KEY_MAP.end() || (key >= ' ' && key <= '~')) && !isMission && (intFun || stringFun) && !isCloseRequest)
@@ -204,14 +215,15 @@ bool Dialog::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command)
 				SDL_free(clipboard);
 			}
 		}
-		else
+		else if(it != KEY_MAP.end())
 		{
-			int ascii = (it != KEY_MAP.end()) ? it->second : key;
+			int ascii = it->second;
 			char c = ((mod & KMOD_SHIFT) ? SHIFT[ascii] : ascii);
 			// Caps lock should shift letters, but not any other keys.
 			if((mod & KMOD_CAPS) && c >= 'a' && c <= 'z')
 				c += 'A' - 'a';
 			s += c;
+			existKeyDownChar = true;
 		}
 		AddText(s);
 	}
@@ -285,10 +297,16 @@ bool Dialog::TextEditing(const char *text, Sint32 start, Sint32 length)
 {
 	if(startTextInput)
 	{
-		if(start == 0)
-			editText = text;
-		else
+#ifdef __unix__
+		if(start != 0)
 			editText += text;
+		else
+			editText = text;
+#else
+		editText = text;
+#endif
+		if(existKeyDownChar && !input.empty())
+			input.resize(input.size() - 1);
 		return true;
 	}
 	return false;
@@ -300,9 +318,8 @@ bool Dialog::TextInput(const char *text)
 {
 	if(startTextInput)
 	{
-		if(editText.empty())
-			// KeyDown() handle direct input text.
-			return true;
+		if(existKeyDownChar)
+			++text;
 		AddText(text);
 		editText.clear();
 		return true;
