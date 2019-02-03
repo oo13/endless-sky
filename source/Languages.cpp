@@ -26,6 +26,10 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include <map>
 #include <stdexcept>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 using namespace std;
 using namespace Gettext;
 
@@ -211,9 +215,14 @@ namespace {
 	
 	
 	
-	// Get the system default language code (ISO-639-1).
+	// Get the system default language code (ISO-639).
 	string GetSystemDefaultLanguage()
 	{
+#ifdef _WIN32
+		char buf[9];
+		GetLocaleInfoA(LOCALE_USER_DEFAULT, LOCALE_SISO639LANGNAME, buf, sizeof(buf));
+		return buf;
+#else
 		try
 		{
 			string lang = locale("").name();
@@ -222,9 +231,6 @@ namespace {
 				r = lang.find('-');
 			if(r == string::npos)
 				r = lang.length();
-			// A code in ISO-639-1 has 2 letters.
-			if(r != 2)
-				return "";
 			lang.resize(r);
 			return lang;
 		}
@@ -232,6 +238,7 @@ namespace {
 		{
 			return "";
 		}
+#endif
 	}
 	
 	
