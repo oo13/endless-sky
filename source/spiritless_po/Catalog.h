@@ -29,7 +29,7 @@ namespace spiritless_po {
 	// Catalog class
 	class Catalog {
 	public:
-		Catalog() noexcept
+		Catalog()
 			: metadata(), index(), stringTable(), pluralFunction([](int n){ return 0; }), maxPlurals(0), errors()
 		{}
 		explicit Catalog(std::istream &is)
@@ -37,10 +37,10 @@ namespace spiritless_po {
 		{
 			Add(is);
 		}
-		Catalog(const Catalog &a) noexcept = default;
-		Catalog(Catalog &&a) noexcept = default;
-		Catalog &operator=(const Catalog &a) noexcept = default;
-		Catalog &operator=(Catalog &&a) noexcept = default;
+		Catalog(const Catalog &a) = default;
+		Catalog(Catalog &&a) = default;
+		Catalog &operator=(const Catalog &a) = default;
+		Catalog &operator=(Catalog &&a) = default;
 		
 		void Clear()
 		{
@@ -58,15 +58,19 @@ namespace spiritless_po {
 			while(it != end)
 			{
 				const PoParser::CatalogEntryT value = ParseOneEntry(pos, typeOfLine);
-				if(value.error.empty())
+				if(typeOfLine == PoParser::LineT::END)
+					break;
+				if(!value.error.empty())
+					errors.push_back(std::move(value.error));
+				else if(!value.msgstr[0].empty())
 				{
 					if(metadata.empty() && value.msgid.empty())
 					{
 						metadata = MetadataParser::Parse(value.msgstr[0]);
 						const auto plural = metadata.find("Plural-Forms");
-						const auto pluralText = plural->second;
 						if(plural != metadata.end())
 						{
+							const auto pluralText = plural->second;
 							try
 							{
 								const auto pluralData = PluralParser::Parse(pluralText);
@@ -81,7 +85,7 @@ namespace spiritless_po {
 							}
 						}
 					}
-					if(!value.msgstr[0].empty())
+					else
 					{
 						IndexDataT idx;
 						idx.stringTableIndex = stringTable.size();
@@ -90,8 +94,6 @@ namespace spiritless_po {
 						index.emplace(value.msgid, idx);
 					}
 				}
-				else
-					errors.push_back(std::move(value.error));
 			}
 			return errors.empty();
 		}
