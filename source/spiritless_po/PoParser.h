@@ -41,6 +41,7 @@ namespace spiritless_po {
 			MSGSTR,
 			MSGSTR_PLURAL,
 			TEXT,
+			END,
 			UNKNOWN
 		};
 		
@@ -237,7 +238,12 @@ namespace spiritless_po {
 			else if (c == '#')
 			{
 				it.Next();
-				if(it.Get() == ',')
+				if(it.Get() == '~')
+				{
+					SkipUntilNL(it);
+					return LineT::EMPTY;
+				}
+				else if(it.Get() == ',')
 				{
 					it.Next();
 					return LineT::FLAG_COMMENT;
@@ -420,7 +426,8 @@ namespace spiritless_po {
 		// Parse one catalog entry.
 		// Pre position: The result of DecisionTypeOfLine() for the first line.
 		// Post position: The result of DecisionTypeOfLine() for next entry.
-		// Return: The line of a type for the next line.
+		// Return: previousLine: The line of a type for the next line.
+		// Return: one catalog entry data. it's empty if previousLine == END.
 		// Note: previousLine must be LineT::START if there is no previous lines.
 		template<class INP>
 		CatalogEntryT ParseOneEntry(PositionT<INP> &it, LineT &previousLine)
@@ -435,6 +442,11 @@ namespace spiritless_po {
 				{
 					ParseEmptyLine(it);
 					stat = DecisionTypeOfLine(it);
+				}
+				if(it.IsEnd())
+				{
+					previousLine = LineT::END;
+					return out;
 				}
 				while(stat == LineT::COMMENT || stat == LineT::FLAG_COMMENT)
 				{
