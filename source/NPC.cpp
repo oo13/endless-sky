@@ -103,14 +103,14 @@ void NPC::Load(const DataNode &node, const string &context)
 			for(int i = 1; i < child.Size(); ++i)
 			{
 				if(!IsEmptyText(dialogText))
-					dialogText.push_back(Tx("\n\t"));
+					dialogText.push_back(T_("\n\t", "dialog paragraph separator"));
 				dialogText.emplace_back(child.Token(i));
 			}
 			for(const DataNode &grand : child)
 				for(int i = 0; i < grand.Size(); ++i)
 				{
 					if(!IsEmptyText(dialogText))
-						dialogText.push_back(Tx("\n\t"));
+						dialogText.push_back(T_("\n\t", "dialog paragraph separator"));
 					dialogText.emplace_back(grand.Token(i));
 				}
 		}
@@ -205,7 +205,7 @@ void NPC::Save(DataWriter &out) const
 			out.BeginChild();
 			{
 				// Break the text up into paragraphs.
-				for(const string &line : Format::Split(Concat(dialogText), "\n\t"))
+				for(const string &line : Format::Split(Concat(dialogText), T("\n\t", "dialog paragraph separator")))
 					out.Write(line);
 			}
 			out.EndChild();

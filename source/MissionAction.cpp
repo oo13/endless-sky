@@ -168,14 +168,14 @@ void MissionAction::Load(const DataNode &node, const string &missionName)
 			for(int i = isSpecial ? 3 : 1; i < child.Size(); ++i)
 			{
 				if(!IsEmptyText(text))
-					text.push_back(Tx("\n\t"));
+					text.push_back(T_("\n\t", "dialog paragraph separator"));
 				text.emplace_back(child.Token(i));
 			}
 			for(const DataNode &grand : child)
 				for(int i = 0; i < grand.Size(); ++i)
 				{
 					if(!IsEmptyText(text))
-						text.push_back(Tx("\n\t"));
+						text.push_back(T_("\n\t", "dialog paragraph separator"));
 					text.emplace_back(grand.Token(i));
 				}
 		}
@@ -263,7 +263,7 @@ void MissionAction::Save(DataWriter &out) const
 			out.BeginChild();
 			{
 				// Break the text up into paragraphs.
-				for(const string &line : Format::Split(Concat(logText), "\n\t"))
+				for(const string &line : Format::Split(Concat(logText), T("\n\t", "dialog paragraph separator")))
 					out.Write(line);
 			}
 			out.EndChild();
@@ -275,7 +275,7 @@ void MissionAction::Save(DataWriter &out) const
 				out.BeginChild();
 				{
 					// Break the text up into paragraphs.
-					for(const string &line : Format::Split(Concat(eit.second), "\n\t"))
+					for(const string &line : Format::Split(Concat(eit.second), T("\n\t", "dialog paragraph separator")))
 						out.Write(line);
 				}
 				out.EndChild();
@@ -286,7 +286,7 @@ void MissionAction::Save(DataWriter &out) const
 			out.BeginChild();
 			{
 				// Break the text up into paragraphs.
-				for(const string &line : Format::Split(Concat(dialogText), "\n\t"))
+				for(const string &line : Format::Split(Concat(dialogText), T("\n\t", "dialog paragraph separator")))
 					out.Write(line);
 			}
 			out.EndChild();

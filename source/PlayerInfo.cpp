@@ -254,7 +254,7 @@ void PlayerInfo::Load(const string &path)
 					for(const DataNode &great : grand)
 					{
 						if(!text.empty())
-							text += "\n\t";
+							text += T("\n\t", "dialog paragraph separator");
 						text += great.Token(0);
 					}
 					logbook.emplace(date, text);
@@ -265,7 +265,7 @@ void PlayerInfo::Load(const string &path)
 					for(const DataNode &great : grand)
 					{
 						if(!text.empty())
-							text += "\n\t";
+							text += T("\n\t", "dialog paragraph separator");
 						text += great.Token(0);
 					}
 				}
@@ -1339,7 +1339,7 @@ void PlayerInfo::AddSpecialLog(const string &type, const string &name, const str
 {
 	string &entry = specialLogs[type][name];
 	if(!entry.empty())
-		entry += "\n\t";
+		entry += T("\n\t", "dialog paragraph separator");
 	entry += text;
 }
 
@@ -2586,7 +2586,7 @@ void PlayerInfo::Save(const string &path) const
 		out.BeginChild();
 		{
 			// Break the text up into paragraphs.
-			for(const string &line : Format::Split(it.second, "\n\t"))
+			for(const string &line : Format::Split(it.second, T("\n\t", "dialog paragraph separator")))
 				out.Write(line);
 		}
 		out.EndChild();
@@ -2598,7 +2598,7 @@ void PlayerInfo::Save(const string &path) const
 			out.BeginChild();
 			{
 				// Break the text up into paragraphs.
-				for(const string &line : Format::Split(eit.second, "\n\t"))
+				for(const string &line : Format::Split(eit.second, T("\n\t", "dialog paragraph separator")))
 					out.Write(line);
 			}
 			out.EndChild();
