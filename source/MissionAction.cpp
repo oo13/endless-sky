@@ -412,7 +412,7 @@ void MissionAction::Do(PlayerInfo &player, UI *ui, const System *destination, co
 		map<string, string> subs;
 		subs["<first>"] = player.FirstName();
 		subs["<last>"] = player.LastName();
-		subs["<fullname>"] = Languages::Fullname(player.FirstName(), player.LastName());
+		subs["<fullname>"] = Languages::GetFullname(player.FirstName(), player.LastName());
 		if(player.Flagship())
 			subs["<ship>"] = player.Flagship()->Name();
 		const string text = Format::Replace(Concat(dialogText), subs);

@@ -96,7 +96,7 @@ void MenuPanel::Draw()
 	if(player.IsLoaded() && !player.IsDead())
 	{
 		info.SetCondition("pilot loaded");
-		const string fullname = Languages::Fullname(player.FirstName(), player.LastName());
+		const string fullname = Languages::GetFullname(player.FirstName(), player.LastName());
 		info.SetString("pilot", font.TruncateMiddle(fullname, 165));
 		if(player.Flagship())
 		{
@@ -114,7 +114,7 @@ void MenuPanel::Draw()
 	else if(player.IsLoaded())
 	{
 		info.SetCondition("no pilot loaded");
-		const string fullname = Languages::Fullname(player.FirstName(), player.LastName());
+		const string fullname = Languages::GetFullname(player.FirstName(), player.LastName());
 		info.SetString("pilot", font.TruncateMiddle(fullname, 165));
 		info.SetString("ship", T("You have died."));
 	}

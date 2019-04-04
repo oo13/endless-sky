@@ -176,7 +176,7 @@ bool GameData::BeginLoad(const char * const *argv)
 	Music::Init(sources);
 	
 	// Search all message catalogs.
-	Languages::SetCatalogFiles(sources);
+	Languages::Init(sources);
 	
 	for(const string &source : sources)
 	{

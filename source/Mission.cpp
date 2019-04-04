@@ -747,7 +747,7 @@ string Mission::BlockedMessage(const PlayerInfo &player)
 	map<string, string> subs;
 	subs["<first>"] = player.FirstName();
 	subs["<last>"] = player.LastName();
-	subs["<fullname>"] = Languages::Fullname(player.FirstName(), player.LastName());
+	subs["<fullname>"] = Languages::GetFullname(player.FirstName(), player.LastName());
 	if(flagship)
 		subs["<ship>"] = flagship->Name();
 	

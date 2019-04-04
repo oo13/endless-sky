@@ -551,12 +551,12 @@ void PreferencesPanel::DrawSettings()
 		else if(setting == LANGUAGE)
 		{
 			isOn = true;
-			text = Preferences::LanguagePreferenceName();
+			text = Preferences::GetLanguageName();
 		}
 		else if(setting == FULLNAME)
 		{
 			isOn = true;
-			text = Preferences::FullnameFormat();
+			text = T(Preferences::GetFullnameFormat(), "preferences");
 		}
 		else
 			text = isOn ? T("on") : T("off");

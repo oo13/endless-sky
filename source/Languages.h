@@ -16,7 +16,6 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #define LANGUAGES_H_
 
 #include <string>
-#include <utility>
 #include <vector>
 
 class DataNode;
@@ -24,36 +23,41 @@ class DataNode;
 // The class managing all language infomations.
 class Languages {
 public:
+	// Initialize.
+	// sources are the list of "source" folders.
+	static void Init(const std::vector<std::string> &sources);
+	
+	
+	// Load a language node.
 	static void Load(const DataNode &node);
 	
-	// Get the name of the selected language.
-	static std::string PreferenceName();
-	// Get the selected language code.
-	static const std::string &LanguageCode();
 	
-	// Set all catalog files under the specified directories.
-	static void SetCatalogFiles(const std::vector<std::string> &sources);
+	// Get current language name.
+	static std::string GetLanguageName();
 	
-	// Select a language.
-	// Select the system default language if languageCode is systemDefaultLanguageCode.
-	static void SelectLanguage(const std::string &languageCode);
+	// Get current language code (ISO-639).
+	// Empty means the system default language.
+	static const std::string &GetLanguageCode();
 	
-	// Set a initial language from preferences.
-	static void SetInitialPreferenceLanguage(const std::string &languageCode);
+	// Set new language code.
+	static void SetLanguageCode(const std::string &languageCode);
 	
-	// Toggle the language.
-	static void ToggleLanguage();
+	// Get known language codes.
+	static const std::vector<std::string> &GetAllLanguageCodes();
 	
-	// Get a fullname.
-	static std::string Fullname(const std::string &first, const std::string &last);
-	// Get a fullname format for preferences.
-	static std::string FullnameFormat();
 	
-	// Set a fullname format from preferences.
+	// Get <fullname>.
+	static std::string GetFullname(const std::string &first, const std::string &last);
+	
+	// Get current <fullname> format.
+	static std::string GetFullnameFormat();
+	
+	// Set new <fullname> format.
+	// Empty means "<first> <last>".
 	static void SetFullnameFormat(const std::string &fullnameFormat);
 	
-	// Toggle the fullname format.
-	static void ToggleFullnameFormat();
+	// Get known fullname formats.
+	static const std::vector<std::string> &GetAllFullnameFormats();
 };
 
 #endif

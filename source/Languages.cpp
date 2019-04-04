@@ -17,11 +17,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Gettext.h"
 #include "Files.h"
 #include "FontSet.h"
-#include "WrappedText.h"
 
 #include <algorithm>
 #include <functional>
-#include <iterator>
 #include <locale>
 #include <map>
 #include <stdexcept>
@@ -36,10 +34,12 @@ using namespace Gettext;
 namespace {
 	class Language {
 	public:
+		explicit Language(const string &code);
+		
 		void Load(const DataNode &node);
 		
 		// Get/Set the name of the language.
-		const string &Name() const;
+		const string &GetName() const;
 		void SetName(const string &langName);
 		
 		// Get the rendering priority of fonts.
@@ -61,25 +61,82 @@ namespace {
 		mutable map<int, string> fontReference;
 		vector<string> catalogFiles;
 		vector<string> fullnameFormats;
+		
+		static const int ANY_FONT_SIZE;
+		static const vector<string> defaultFullnameFormats;
 	};
 	
+	const int Language::ANY_FONT_SIZE = -1;
+	const vector<string> Language::defaultFullnameFormats{"<first> <last>"};
 	
 	
-	const int ANY_FONT_SIZE = -1;
 	
-	// Specical language code for system default.
-	const string systemDefaultLanguageCode(G("system default"));
-	const string englishCode("en");
-	map<string, Language> languages{ { englishCode, Language() } };
-	map<string, Language>::iterator selected = languages.begin();
+	// System default language code.
+	string systemDefaultLanguageCode;
 	
-	vector<string> toggleList{ systemDefaultLanguageCode, englishCode };
-	size_t currentIndex = 0;
+	// List of language codes.
+	vector<string> languageCodes{"", "en"};
 	
-	// Fullname format.
-	const string defaultFullnameFormat("<first> <last>");
-	string currentFullnameFormat(defaultFullnameFormat);
-	size_t currentFullnameIndex = 0;
+	// map of a language. (language code -> an instance of Language)
+	map<string, Language> languages;
+	
+	// Current language code.
+	string currentLanguageCode;
+	
+	// Current fullname format.
+	string currentFullnameFormat;
+	
+	
+	
+	// Get the system default language code (ISO-639).
+	string GetSystemDefaultLanguageCode()
+	{
+#ifdef _WIN32
+		char buf[9];
+		GetLocaleInfoA(LOCALE_USER_DEFAULT, LOCALE_SISO639LANGNAME, buf, sizeof(buf));
+		return buf;
+#else
+		try
+		{
+			string lang = locale("").name();
+			size_t r = lang.find('_');
+			if(r == string::npos)
+				r = lang.find('-');
+			if(r == string::npos)
+				r = lang.length();
+			lang.resize(r);
+			return lang;
+		}
+		catch (runtime_error &e)
+		{
+			return "";
+		}
+#endif
+	}
+	
+	
+	
+	// Get an instance of language from the map of languages.
+	Language &GetLanguage(const string &languageCode)
+	{
+		string code = languageCode.empty() ? systemDefaultLanguageCode : languageCode;
+		auto it = languages.find(code);
+		if(it != languages.end())
+			return it->second;
+		else
+		{
+			auto it2 = find(languageCodes.begin(), languageCodes.end(), code);
+			if(it2 == languageCodes.end())
+				languageCodes.push_back(code);
+			return languages.emplace(code, code).first->second;
+		}
+	}
+	
+	
+	
+	Language::Language(const string &code)
+		: name(code), fontPriority(), fontReference(), catalogFiles(), fullnameFormats()
+	{}
 	
 	
 	
@@ -95,7 +152,7 @@ namespace {
 			node.PrintTrace("Must have two language size:");
 			return;
 		}
-		name = node.Token(1);
+		SetName(node.Token(1));
 		
 		for(const DataNode &child : node)
 		{
@@ -133,7 +190,14 @@ namespace {
 			}
 			else if(child.Token(0) == "fullname")
 				for(const DataNode &grand : child)
-					fullnameFormats.push_back(grand.Token(0));
+				{
+					const string &fullname = grand.Token(0);
+					auto it = find(fullnameFormats.begin(), fullnameFormats.end(), fullname);
+					if(it == fullnameFormats.end())
+						fullnameFormats.push_back(grand.Token(0));
+					else
+						grand.PrintTrace("Duplicate <fullname> format:");
+				}
 			else
 				child.PrintTrace("Skipping unrecognized attribute:");
 		}
@@ -141,7 +205,7 @@ namespace {
 	
 	
 	
-	const string &Language::Name() const
+	const string &Language::GetName() const
 	{
 		return name;
 	}
@@ -210,66 +274,35 @@ namespace {
 	
 	const vector<string> &Language::GetFullnameFormats() const
 	{
-		return fullnameFormats;
-	}
-	
-	
-	
-	// Get the system default language code (ISO-639).
-	string GetSystemDefaultLanguage()
-	{
-#ifdef _WIN32
-		char buf[9];
-		GetLocaleInfoA(LOCALE_USER_DEFAULT, LOCALE_SISO639LANGNAME, buf, sizeof(buf));
-		return buf;
-#else
-		try
-		{
-			string lang = locale("").name();
-			size_t r = lang.find('_');
-			if(r == string::npos)
-				r = lang.find('-');
-			if(r == string::npos)
-				r = lang.length();
-			lang.resize(r);
-			return lang;
-		}
-		catch (runtime_error &e)
-		{
-			return "";
-		}
-#endif
-	}
-	
-	
-	
-	Language &getLanguage(const string &code)
-	{
-		const size_t oldSize = languages.size();
-		Language &lang = languages[code];
-		if(oldSize < languages.size())
-		{
-			toggleList.push_back(code);
-			lang.SetName(code);
-		}
-		return lang;
-	}
-	
-	
-	
-	void SetFullnameFormatFromIndex(size_t n)
-	{
-		const vector<string> formats = selected->second.GetFullnameFormats();
-		if(formats.empty())
-			currentFullnameFormat = defaultFullnameFormat;
+		if(fullnameFormats.empty())
+			return defaultFullnameFormats;
 		else
+			return fullnameFormats;
+	}
+}
+
+
+
+void Languages::Init(const std::vector<std::string> &sources)
+{
+	systemDefaultLanguageCode = GetSystemDefaultLanguageCode();
+	
+	for(const string &source : sources)
+	{
+		const vector<string> langDirs = Files::ListDirectories(source + "locales/");
+		for(const auto &langDir : langDirs)
 		{
-			currentFullnameIndex = n;
-			if(n >= formats.size())
-				currentFullnameIndex = 0;
-			currentFullnameFormat = formats[currentFullnameIndex];
+			string langCode(langDir);
+			langCode.pop_back();
+			langCode = Files::Name(langCode);
+			auto &language = GetLanguage(langCode);
+			for(const auto &filename : Files::List(langDir))
+				if(Files::Extension(filename) == ".po")
+					language.AddCatalogFile(filename);
 		}
 	}
+	
+	SetLanguageCode("");
 }
 
 
@@ -287,106 +320,55 @@ void Languages::Load(const DataNode &node)
 		return;
 		
 	}
-	getLanguage(node.Token(1)).Load(node);
+	GetLanguage(node.Token(1)).Load(node);
 }
 
 
 
-string Languages::PreferenceName()
+string Languages::GetLanguageName()
 {
-	if(currentIndex == 0)
-		return T(systemDefaultLanguageCode);
+	if(currentLanguageCode.empty())
+		return T("system default");
 	else
-		return selected->second.Name();
+		return GetLanguage(currentLanguageCode).GetName();
 }
 
 
 
-const string &Languages::LanguageCode()
+const string &Languages::GetLanguageCode()
 {
-	return toggleList[currentIndex];
+	return currentLanguageCode;
 }
 
 
 
-void Languages::SetCatalogFiles(const vector<string> &sources)
+void Languages::SetLanguageCode(const std::string &languageCode)
 {
-	for(const string &source : sources)
-	{
-		const vector<string> langDirs = Files::ListDirectories(source + "locales/");
-		for(const auto &langDir : langDirs)
-		{
-			string lang(langDir);
-			lang.pop_back();
-			lang = Files::Name(lang);
-			for(const auto &filename : Files::List(langDir))
-				if(Files::Extension(filename) == ".po")
-					getLanguage(lang).AddCatalogFile(filename);
-		}
-	}
-}
-
-
-
-void Languages::SelectLanguage(const string &languageCode)
-{
-	string code = languageCode;
-	if(languageCode == systemDefaultLanguageCode)
-		code = GetSystemDefaultLanguage();
-	selected = languages.find(code);
-	if(selected == languages.end())
-		selected = languages.emplace(code, Language()).first;
-	
-	auto prioFunc = [&](int s) -> const vector<string>& { return selected->second.FontPriority(s); };
-	auto refFunc = [&](int s) -> const string& { return selected->second.FontReference(s); };
+	currentLanguageCode = languageCode;
+	auto &lang = GetLanguage(currentLanguageCode);
+	auto prioFunc = [&](int s) -> const vector<string>& { return lang.FontPriority(s); };
+	auto refFunc = [&](int s) -> const string& { return lang.FontReference(s); };
 	FontSet::SetFontPriority(prioFunc, refFunc);
-	Gettext::UpdateCatalog(selected->second.CatalogFiles());
+	Gettext::UpdateCatalog(lang.CatalogFiles());
 }
 
 
 
-void Languages::SetInitialPreferenceLanguage(const string &languageCode)
+const vector<string> &Languages::GetAllLanguageCodes()
 {
-	if(languageCode == systemDefaultLanguageCode)
-		currentIndex = 0;
-	else
-	{
-		auto it = find(toggleList.begin(), toggleList.end(), languageCode);
-		if(it == toggleList.end())
-		{
-			getLanguage(languageCode);
-			it = toggleList.end();
-			--it;
-		}
-		currentIndex = distance(toggleList.begin(), it);
-	}
-	SelectLanguage(toggleList[currentIndex]);
+	return languageCodes;
 }
 
 
 
-void Languages::ToggleLanguage()
+string Languages::GetFullname(const string &first, const string &last)
 {
-	++currentIndex;
-	if(currentIndex >= toggleList.size())
-		currentIndex = 0;
-	SelectLanguage(toggleList[currentIndex]);
-	SetFullnameFormatFromIndex(0);
+	return Format::Replace(currentFullnameFormat, { {"<first>", first}, {"<last>", last} });
 }
 
 
 
-string Languages::Fullname(const string &first, const string &last)
-{
-	map<string, string> subs;
-	subs["<first>"] = first;
-	subs["<last>"] = last;
-	return Format::Replace(currentFullnameFormat, subs);
-}
-
-
-
-string Languages::FullnameFormat()
+string Languages::GetFullnameFormat()
 {
 	return currentFullnameFormat;
 }
@@ -395,19 +377,12 @@ string Languages::FullnameFormat()
 
 void Languages::SetFullnameFormat(const std::string &fullnameFormat)
 {
-	const vector<string> formats = selected->second.GetFullnameFormats();
-	auto it = find(formats.begin(), formats.end(), fullnameFormat);
-	if(it == formats.end())
-		currentFullnameIndex = 0;
-	else
-		currentFullnameIndex = distance(formats.begin(), it);
-	SetFullnameFormatFromIndex(currentFullnameIndex);
+	currentFullnameFormat = fullnameFormat;
 }
 
 
 
-void Languages::ToggleFullnameFormat()
+const vector<std::string> &Languages::GetAllFullnameFormats()
 {
-	++currentFullnameIndex;
-	SetFullnameFormatFromIndex(currentFullnameIndex);
+	return GetLanguage(currentLanguageCode).GetFullnameFormats();
 }

@@ -22,6 +22,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Screen.h"
 
 #include <algorithm>
+#include <cassert>
 #include <map>
 #include <utility>
 
@@ -75,7 +76,7 @@ void Preferences::Load()
 		else if(node.Token(0) == "view zoom")
 			zoomIndex = node.Value(1);
 		else if(node.Token(0) == "language" && node.Size() >= 2)
-			Languages::SetInitialPreferenceLanguage(node.Token(1));
+			Languages::SetLanguageCode(node.Token(1));
 		else if(node.Token(0) == "fullname format" && node.Size() >= 2)
 			Languages::SetFullnameFormat(node.Token(1));
 		else
@@ -94,8 +95,8 @@ void Preferences::Save()
 	out.Write("zoom", Screen::Zoom());
 	out.Write("scroll speed", scrollSpeed);
 	out.Write("view zoom", zoomIndex);
-	out.Write("language", Languages::LanguageCode());
-	out.Write("fullname format", Languages::FullnameFormat());
+	out.Write("language", Languages::GetLanguageCode());
+	out.Write("fullname format", Languages::GetFullnameFormat());
 	
 	for(const auto &it : settings)
 		out.Write(it.first, it.second);
@@ -182,26 +183,46 @@ bool Preferences::ZoomViewOut()
 
 void Preferences::ToggleLanguage()
 {
-	Languages::ToggleLanguage();
+	const string &langCode = Languages::GetLanguageCode();
+	const vector<string> &allLangCodes = Languages::GetAllLanguageCodes();
+	auto it = find(allLangCodes.begin(), allLangCodes.end(), langCode);
+	assert(it != allLangCodes.end());
+	++it;
+	if(it == allLangCodes.end())
+		Languages::SetLanguageCode(allLangCodes[0]);
+	else
+		Languages::SetLanguageCode(*it);
 }
 
 
 
-string Preferences::LanguagePreferenceName()
+string Preferences::GetLanguageName()
 {
-	return Languages::PreferenceName();
+	return Languages::GetLanguageName();
 }
 
 
 
 void Preferences::ToggleFullnameFormat()
 {
-	Languages::ToggleFullnameFormat();
+	const string &fmt = Languages::GetFullnameFormat();
+	const vector<string> &fmts = Languages::GetAllFullnameFormats();
+	auto it = find(fmts.begin(), fmts.end(), fmt);
+	if(it == fmts.end())
+		Languages::SetFullnameFormat(fmts[0]);
+	else
+	{
+		++it;
+		if(it == fmts.end())
+			Languages::SetFullnameFormat(fmts[0]);
+		else
+			Languages::SetFullnameFormat(*it);
+	}
 }
 
 
 
-string Preferences::FullnameFormat()
+string Preferences::GetFullnameFormat()
 {
-	return Languages::FullnameFormat();
+	return Languages::GetFullnameFormat();
 }

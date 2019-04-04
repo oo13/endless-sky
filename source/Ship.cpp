@@ -965,7 +965,7 @@ string Ship::GetHail(const PlayerInfo &player) const
 	
 	subs["<first>"] = player.FirstName();
 	subs["<last>"] = player.LastName();
-	subs["<fullname>"] = Languages::Fullname(player.FirstName(), player.LastName());
+	subs["<fullname>"] = Languages::GetFullname(player.FirstName(), player.LastName());
 	if(player.Flagship())
 		subs["<ship>"] = player.Flagship()->Name();
 	

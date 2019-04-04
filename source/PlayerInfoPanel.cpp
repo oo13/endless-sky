@@ -483,7 +483,7 @@ void PlayerInfoPanel::DrawPlayer(const Rectangle &bounds)
 	
 	// Header row.
 	table.Draw(T("player:"), dim);
-	const string fullname = Languages::Fullname(player.FirstName(), player.LastName());
+	const string fullname = Languages::GetFullname(player.FirstName(), player.LastName());
 	table.Draw(fullname, bright);
 	table.Draw(T("net worth:"), dim);
 	table.Draw(Format::Credits(player.Accounts().NetWorth()) + T(" credits", "PlayerInfoPanel"), bright);

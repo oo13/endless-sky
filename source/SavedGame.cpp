@@ -40,7 +40,7 @@ void SavedGame::Load(const string &path)
 	for(const DataNode &node : file)
 	{
 		if(node.Token(0) == "pilot" && node.Size() >= 3)
-			name = Languages::Fullname(node.Token(1), node.Token(2));
+			name = Languages::GetFullname(node.Token(1), node.Token(2));
 		else if(node.Token(0) == "date" && node.Size() >= 4)
 			date = Date(node.Value(1), node.Value(2), node.Value(3));
 		else if(node.Token(0) == "system" && node.Size() >= 2)
